@@ -629,7 +629,12 @@ def compute_overall_verdict(
 
     if is_synthetic or overall_v == "AI_GENERATED":
         final_category = "Deepfake"
-        overall = overall_v_label or "LIKELY AI-GENERATED"
+        if overall_v_label and "deepfake" in overall_v_label.lower():
+            overall = overall_v_label
+        elif overall_v_label:
+            overall = f"{overall_v_label} (Deepfake Detected)"
+        else:
+            overall = "Deepfake / Synthetic Media Detected"
         veto_applied = {
             "type": "forensics_synthetic_veto",
             "reason": forensics_veto.get("reason") or unified_report.get("summary") or f"Synthetic audio / deepfake probability ({int(max(deepfake_prob, voice_clone_prob) * 100)}%) exceeds safe threshold",

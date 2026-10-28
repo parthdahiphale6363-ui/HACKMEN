@@ -386,6 +386,7 @@ export default function Home() {
                 placeholder="Paste YouTube Shorts URL only (e.g., https://www.youtube.com/shorts/…)…"
                 value={url}
                 onChange={e => setUrl(e.target.value)}
+                aria-label="YouTube Shorts URL"
                 required
               />
               {url && (
@@ -394,12 +395,13 @@ export default function Home() {
                   className="url-clear-btn"
                   onClick={() => setUrl('')}
                   title="Clear input"
+                  aria-label="Clear URL input"
                 >
                   ✕
                 </button>
               )}
-              <button id="analyze-btn" type="submit" className="btn-analyze">
-                <span className="btn-sparkle">⚡</span>
+              <button id="analyze-btn" type="submit" className="btn-analyze" aria-label="Analyze YouTube Shorts video">
+                <span className="btn-sparkle" aria-hidden="true">⚡</span>
                 <span>Analyze Shorts</span>
               </button>
             </div>
@@ -522,13 +524,13 @@ export default function Home() {
 
       {/* ── Error States ── */}
       {(stage === 'failed' || stage === 'extraction_failed') && (
-        <div className="error-box">
-          <p style={{ fontSize: '2.5rem', marginBottom: '0.75rem' }}>⚠️</p>
+        <div className="error-box" role="alert" aria-live="assertive">
+          <p style={{ fontSize: '2.5rem', marginBottom: '0.75rem' }} aria-hidden="true">⚠️</p>
           <h2 style={{ fontFamily: 'Outfit, sans-serif', fontSize: '1.4rem', color: '#dc2626', marginBottom: '0.5rem' }}>
             {stage === 'extraction_failed' ? 'Claim Extraction Failed' : 'Processing Failed'}
           </h2>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '1.5rem' }}>{errorMessage}</p>
-          <button className="btn-reset" onClick={reset} style={{ padding: '0.75rem 2rem' }}>↩ Try Again</button>
+          <button className="btn-reset" onClick={reset} style={{ padding: '0.75rem 2rem' }} aria-label="Try analysis again">↩ Try Again</button>
         </div>
       )}
 
@@ -536,7 +538,7 @@ export default function Home() {
       {isProcessing && (
         <>
           <div className="glass pipeline-wrap" style={{ marginBottom: '1.5rem', position: 'relative', overflow: 'hidden' }}>
-            <div className="scan-ray" />
+            <div className="scan-ray" aria-hidden="true" />
             <div className="pipeline-stages">
               {PIPELINE_STAGES.filter(s => s !== 'done').map((s, i) => {
                 const si = PIPELINE_STAGES.indexOf(s);
@@ -558,13 +560,21 @@ export default function Home() {
               })}
             </div>
             <div className="progress-bar-wrap">
-              <div className="progress-bar-fill" style={{ width: `${progress}%` }} />
+              <div
+                className="progress-bar-fill"
+                role="progressbar"
+                aria-valuenow={progress}
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-label="Video analysis progress"
+                style={{ width: `${progress}%` }}
+              />
             </div>
           </div>
 
           <div style={{ marginBottom: '1.5rem' }}>
-            <div className="processing-status">
-              <div className="status-dot" />
+            <div className="processing-status" role="status" aria-live="polite">
+              <div className="status-dot" aria-hidden="true" />
               <p style={{ fontSize: '0.88rem', color: 'var(--text-secondary)' }}>{STAGE_MSG[stage] || 'Processing…'}</p>
             </div>
           </div>
