@@ -1,0 +1,24 @@
+name: TruthLens 24/7 Keep-Alive Monitor
+
+on:
+  schedule:
+    # Runs every 10 minutes to prevent Render Free Tier from ever sleeping
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+jobs:
+  ping:
+    name: Ping Services
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping TruthLens Backend
+        run: |
+          echo "Pinging TruthLens backend..."
+          curl -s -f -m 60 "https://truthlens-backend-ca5w.onrender.com/health" || true
+      - name: Ping TruthLens Frontend
+        run: |
+          echo "Pinging TruthLens frontend..."
+          curl -s -f -m 60 "https://truthlens-frontend-bisr.onrender.com" || true

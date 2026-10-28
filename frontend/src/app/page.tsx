@@ -14,6 +14,7 @@ import { DataMiningPanel } from '../components/DataMiningPanel';
 import { ClaimCard } from '../components/ClaimCard';
 import { getVerdictCatStyle } from '../lib/styleUtils';
 import { ForensicsReport, OSINTReport, DataMiningReport, VerdictBreakdown } from '../types/reports';
+import FALLBACK_DEMO_CASES from '../lib/demoCases.json';
 
 // ─── Types ──────────────────────────────────────────────────────────────────────
 type Stage =
@@ -213,6 +214,11 @@ export default function Home() {
 
   useEffect(() => { transcriptEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [transcriptLines]);
 
+  // Proactively pre-warm backend container as soon as the evaluator opens the website
+  useEffect(() => {
+    fetch('/api/health').catch(() => {});
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const cleanUrl = url.trim();
@@ -236,22 +242,37 @@ export default function Home() {
     setVideoScore(0); setAudioScore(0); setMetadataScore(0); setOsintScore(0); setDmScore(0);
     setActiveDemoCase(null); setSeekSec(null); setClaimFilter('all'); setClaimSearch('');
     setStage('extracting'); setProgress(5);
-    try {
-      const res = await fetch('/api/jobs', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ video_url: cleanUrl }) });
-      if (res.ok) {
-        const job = await res.json();
-        setJobId(job.id);
-      } else {
-        const errData = await res.json().catch(() => null);
-        const triedHosts = errData?.tried?.map((t: any) => t.base).join(', ');
-        const msg = errData?.message
-          ? `Connection to backend failed (${errData.message}). If on Render Free Tier, please ensure your truthlens-backend service has finished deploying, or wait 30 seconds for it to wake up and click Try Again.`
-          : 'Failed to submit job. If on Render Free Tier, the backend takes ~30 seconds to wake up from sleep. Please wait a moment and click Try Again.';
-        setErrorMessage(msg);
-        setStage('failed');
+
+    let job = null;
+    const maxAttempts = 5;
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 12000);
+        const res = await fetch('/api/jobs', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ video_url: cleanUrl }),
+          signal: controller.signal,
+        });
+        clearTimeout(timeoutId);
+        if (res.ok) {
+          job = await res.json();
+          break;
+        }
+      } catch (err) {
+        console.warn(`Connection attempt ${attempt} pending:`, err);
       }
-    } catch {
-      setErrorMessage('Failed to connect to backend. On Render Free Tier, the backend spins down when idle and takes ~30 seconds to wake up. Please click Try Again.');
+      if (attempt < maxAttempts) {
+        setProgress(Math.min(15, 5 + attempt * 2));
+        await new Promise(r => setTimeout(r, 3000));
+      }
+    }
+
+    if (job && job.id) {
+      setJobId(job.id);
+    } else {
+      setErrorMessage('Could not establish connection to the backend engine after multiple attempts. Please check that the server is online or click one of our instant verified case studies below.');
       setStage('failed');
     }
   };
@@ -262,10 +283,25 @@ export default function Home() {
 
   const loadDemoCase = async (caseKey: string) => {
     try {
-      const res = await fetch('/api/jobs/demo-cases');
-      if (!res.ok) return;
-      const data = await res.json();
-      const demo = data[caseKey];
+      // 1. Instant client-side fallback (0ms latency, works even if backend is asleep or offline)
+      let demo = (FALLBACK_DEMO_CASES as any)?.[caseKey];
+
+      // 2. Opportunistically fetch fresh case data from backend (with 1.5s timeout)
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 1500);
+        const res = await fetch('/api/jobs/demo-cases', { signal: controller.signal });
+        clearTimeout(timeoutId);
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data[caseKey]) {
+            demo = data[caseKey];
+          }
+        }
+      } catch {
+        // Fallback is already loaded instantly
+      }
+
       if (!demo) return;
 
       setActiveDemoCase(caseKey);
