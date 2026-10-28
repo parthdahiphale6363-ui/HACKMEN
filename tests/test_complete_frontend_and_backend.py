@@ -278,3 +278,82 @@ class TestMultiModalPipelineFullFlow:
         assert "AUTHENTIC_NO_ANOMALIES_DETECTED" in dossier
         assert "phase-2-test-job" in dossier
         assert len(dossier) > 500
+
+    def test_cross_engine_forensics_osint_datamining_integration(self):
+        """
+        Verify the complete cross-engine integration:
+        Forensics -> OSINT -> Data Mining -> Score Fusion -> Constitutional Veto.
+        """
+        from backend.services.osint import run_osint_pipeline
+        from backend.services.data_mining import run_data_mining_pipeline
+        from backend.services.job_service import compute_overall_verdict
+
+        transcript = "Breaking news: Severe flash floods observed in downtown Paris after unprecedented rainfall."
+        claim_items = [{
+            "claim": {
+                "id": "c1",
+                "raw_text": "Severe flash floods in Paris",
+                "normalized_text": "Severe flash floods in Paris",
+            },
+            "verdict": {
+                "label": "false",
+                "confidence": 0.95,
+                "summary": "Debunked recycled footage from 2016.",
+                "evidence": []
+            }
+        }]
+
+        # 1. Forensics Report Output
+        forensics_report = {
+            "video_integrity_score": 85.0,
+            "audio_integrity_score": 90.0,
+            "metadata_integrity_score": 80.0,
+            "deepfake_probability": 0.10,
+            "voice_clone_probability": 0.05,
+            "is_synthetic": False,
+            "red_flag_count": 0,
+            "red_flags": [],
+            "geolocation": {"countries": ["France"], "cities": ["Paris"]},
+            "temporal_analysis": {"date_references": ["2026-03-10"], "years_mentioned": [2026]},
+            "unified_authenticity": {
+                "classification": "AUTHENTIC_NO_ANOMALIES_DETECTED",
+                "confidence_level": "HIGH",
+                "reason": "Natural organic video capture.",
+            }
+        }
+
+        # 2. OSINT receives Forensics signals (locations, date_refs)
+        osint_report = run_osint_pipeline(
+            transcript=transcript,
+            video_url="https://youtube.com/watch?v=mock_paris_flood",
+            claim_items=claim_items,
+            forensics_report=forensics_report
+        )
+        assert "osint_score" in osint_report
+        assert "contradiction_count" in osint_report
+        assert "geo_verification" in osint_report
+
+        # 3. Data Mining receives both Forensics and OSINT
+        dm_report = run_data_mining_pipeline(
+            transcript=transcript,
+            claim_items=claim_items,
+            forensics_report=forensics_report,
+            osint_report=osint_report
+        )
+        assert "dm_score" in dm_report
+        assert "classification" in dm_report
+        assert "summary" in dm_report
+
+        # 4. Score Fusion across all 3 engines
+        scores = fuse_scores(forensics_report, osint_report, dm_report, claim_items)
+        assert scores["video_score"] == 85.0
+        assert scores["audio_score"] == 90.0
+        assert scores["metadata_score"] == 80.0
+        assert "overall_confidence" in scores
+
+        # 5. Overall Verdict Constitutional Governance
+        overall = compute_overall_verdict(claim_items, dm_report, forensics_report, osint_report)
+        assert "overall_verdict" in overall
+        assert "verdict_breakdown" in overall
+        assert "final_verdict_category" in overall
+
