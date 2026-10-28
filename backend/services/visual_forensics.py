@@ -153,6 +153,9 @@ def analyze_video_visual(video_path: Optional[str]) -> Dict[str, Any]:
         face_cascade = cv2.CascadeClassifier(haar_path) if os.path.exists(haar_path) else None
 
         frames_analyzed = 0
+        frames_sampled = 0
+        sampling_timestamps = []
+        skipped_frames = []
         prev_hsv_hist = None
         scene_cut_count = 0
         abrupt_transitions = 0
@@ -180,15 +183,21 @@ def analyze_video_visual(video_path: Optional[str]) -> Dict[str, Any]:
                 ret, frame = cap.read()
             except Exception as read_err:
                 logger.warning(f"Error reading frame {current_frame_idx}: {read_err}")
+                skipped_frames.append({
+                    "frame_idx": current_frame_idx,
+                    "timestamp": round(current_frame_idx / max(fps, 1.0), 2),
+                    "reason": f"Read error: {read_err}",
+                })
                 break
 
             if not ret or frames_analyzed >= max_samples:
                 break
 
             if current_frame_idx % step == 0:
+                frames_sampled += 1
+                curr_timestamp = round(current_frame_idx / max(fps, 1.0), 2)
                 try:
-                    frames_analyzed += 1
-                    curr_timestamp = round(current_frame_idx / max(fps, 1.0), 2)
+                    sampling_timestamps.append(curr_timestamp)
                     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
                     # ── 1. Scene Difference & Cut Detection ──
@@ -291,8 +300,15 @@ def analyze_video_visual(video_path: Optional[str]) -> Dict[str, Any]:
                         ela_maxes.append(emax)
                         ela_vars.append(ev)
 
+                    frames_analyzed += 1
+
                 except Exception as frame_proc_err:
                     logger.debug(f"Skipping problematic frame {current_frame_idx}: {frame_proc_err}")
+                    skipped_frames.append({
+                        "frame_idx": current_frame_idx,
+                        "timestamp": curr_timestamp,
+                        "reason": str(frame_proc_err),
+                    })
 
             current_frame_idx += 1
 
@@ -418,9 +434,76 @@ def analyze_video_visual(video_path: Optional[str]) -> Dict[str, Any]:
     if ela_data.variance and ela_data.variance > 18.0:
         visual_synthetic_score = max(visual_synthetic_score, 0.60)
 
+    # ── Independent Visual Modality Verdict (Section 1 & 7) ──
+    vis_evidence = []
+    for flag in unique_fft_flags:
+        vis_evidence.append({
+            "detector": "2D FFT Spectral Profiler",
+            "signal": flag,
+            "severity": "high" if "abnormally" in flag.lower() or "elevated" in flag.lower() else "moderate",
+            "timestamp": None,
+            "details": f"Fourier frequency analysis: {flag}",
+        })
+    for flag in face_indicators:
+        vis_evidence.append({
+            "detector": "Haar Face Boundary Inspector",
+            "signal": flag,
+            "severity": "high",
+            "timestamp": None,
+            "details": f"Face tracking: {flag}",
+        })
+
+    if visual_synthetic_score >= 0.70 or (anomaly_level == "elevated" and len(observed_anomalies) >= 3):
+        vis_verdict = "AI_GENERATED"
+        vis_verdict_label = "LIKELY AI-GENERATED"
+        vis_reason = "2D FFT frequency spectrum abnormalities, periodic grid artifacts, or keyframe compression discrepancies indicate synthetic AI video generation."
+    elif face_data.mean_boundary_blur_ratio and face_data.mean_boundary_blur_ratio > 1.85:
+        vis_verdict = "PARTIALLY_AI_GENERATED"
+        vis_verdict_label = "LIKELY PARTIALLY AI-GENERATED / AI-EDITED"
+        vis_reason = "Localized facial boundary blur discrepancies and displacement jitter suggest facial splicing or deepfake insertion."
+    elif scene_cuts_data.abrupt_transitions >= 4 or (ela_data.variance and ela_data.variance > 18.0):
+        vis_verdict = "LIKELY_MANIPULATED"
+        vis_verdict_label = "LIKELY MANIPULATED — ORIGIN UNDETERMINED"
+        vis_reason = "Abrupt frame transitions or localized compression error variance indicate video editing, but origin (AI vs conventional) is undetermined."
+    elif anomaly_level == "low" and len(observed_anomalies) == 0:
+        vis_verdict = "LIKELY_AUTHENTIC"
+        vis_verdict_label = "LIKELY AUTHENTIC — NO STRONG AI INDICATORS DETECTED"
+        vis_reason = "Sampled frame frequency distributions, blur stability, and compression profiles match organic camera recordings."
+    else:
+        vis_verdict = "INCONCLUSIVE"
+        vis_verdict_label = "INCONCLUSIVE"
+        vis_reason = "Visual signals are mixed or borderline; insufficient evidence to establish synthetic manipulation."
+
+    visual_modality_result = {
+        "status": "COMPLETED",
+        "verdict": vis_verdict,
+        "verdict_label": vis_verdict_label,
+        "detector_name": "OpenCV 5.0 (cv2) + Signal Processing",
+        "detector_version": "4.10.x / 5.0",
+        "coverage_details": {
+            "frames_sampled": frames_sampled,
+            "frames_analyzed": frames_analyzed,
+            "sampling_timestamps": sampling_timestamps[:30],
+            "skipped_count": len(skipped_frames),
+            "video_resolution": resolution,
+            "duration_seconds": duration,
+        },
+        "error_code": None,
+        "evidence": vis_evidence,
+        "suspicious_segments": suspicious_segments,
+        "limitations": [
+            "Inference from sampled keyframes (~1 fps), not continuous per-frame inference.",
+            "High compression and camera bokeh can mimic certain mathematical focus anomalies.",
+            "Absence of detectable artifacts does not guarantee video authenticity.",
+        ],
+    }
+
     schema = OpenCVVisualForensics(
         status="assessed",
+        frames_sampled=frames_sampled,
         frames_analyzed=frames_analyzed,
+        sampling_timestamps=sampling_timestamps[:30],
+        skipped_frames=skipped_frames[:10],
         video_duration_seconds=duration,
         video_resolution=resolution,
         scene_cuts=scene_cuts_data,
@@ -432,6 +515,7 @@ def analyze_video_visual(video_path: Optional[str]) -> Dict[str, Any]:
         visual_synthetic_score=round(float(visual_synthetic_score), 2),
         observed_anomalies=observed_anomalies[:6],
         suspicious_segments=suspicious_segments,
+        visual_modality_result=visual_modality_result,
         limitations="Visual forensic indicators measure statistical, boundary, and frequency properties. They indicate anomalies for analyst review and do not constitute deterministic proof of synthetic media generation.",
     )
     return schema.model_dump()

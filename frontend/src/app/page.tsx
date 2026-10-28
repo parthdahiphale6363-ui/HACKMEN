@@ -733,7 +733,7 @@ export default function Home() {
           )}
 
           {/* Forensics Panel */}
-          {forensicsReport && <ForensicsPanel report={forensicsReport} />}
+          {forensicsReport && <ForensicsPanel report={forensicsReport} onSeek={handleSeek} />}
 
           {/* OSINT Panel */}
           {osintReport && <OSINTPanel report={osintReport} />}

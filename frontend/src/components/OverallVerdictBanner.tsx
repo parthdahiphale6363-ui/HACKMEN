@@ -28,8 +28,9 @@ export function OverallVerdictBanner({
           <div className="verdict-eyebrow" style={{ color: s.color }}>Forensic Verdict</div>
           <div className="verdict-title" style={{ color: s.color }}>{verdict}</div>
           <p className="verdict-subtitle">
-            Based on {breakdown?.total || 0} factual claims verified via live web search, combined with
-            forensic analysis, OSINT intelligence, and data mining algorithms.
+            {(breakdown?.total || 0) > 0
+              ? `Based on ${breakdown.total} factual claims verified via live web search, combined with multi-modal forensics, OSINT intelligence, and pattern mining.`
+              : 'Based on multi-modal computer vision forensics, 2D FFT spectral profiling, acoustic stream analysis, and C2PA Content Credentials.'}
           </p>
         </div>
         <div className="confidence-dial-wrap">

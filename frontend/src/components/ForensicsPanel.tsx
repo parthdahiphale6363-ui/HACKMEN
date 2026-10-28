@@ -5,9 +5,10 @@ import { ForensicsReport, SuspiciousSegment } from '../types/reports';
 
 interface ForensicsPanelProps {
   report: ForensicsReport | null | undefined;
+  onSeek?: (seconds: number) => void;
 }
 
-export function ForensicsPanel({ report }: ForensicsPanelProps) {
+export function ForensicsPanel({ report, onSeek }: ForensicsPanelProps) {
   const [open, setOpen] = useState(true);
   const [showOpenCV, setShowOpenCV] = useState(true);
   const [showGemini, setShowGemini] = useState(true);
@@ -18,39 +19,49 @@ export function ForensicsPanel({ report }: ForensicsPanelProps) {
   if (!report) return null;
 
   const unified = report.unified_authenticity;
-  const classification = unified?.classification || (report.is_synthetic ? 'LIKELY_AI_GENERATED' : 'INCONCLUSIVE');
+  const classification = unified?.overall_verdict || unified?.classification || (report.is_synthetic ? 'AI_GENERATED' : 'INCONCLUSIVE');
+  const verdictLabel = unified?.overall_verdict_label || unified?.classification;
   const confidence = unified?.confidence_level || 'UNCERTAIN';
-  const reason = unified?.reason || report.summary || 'Forensic analysis completed.';
+  const confidenceMeaning = unified?.confidence_meaning || '';
+  const reason = unified?.summary || unified?.reason || report.summary || 'Forensic analysis completed.';
   const suspiciousSegments: SuspiciousSegment[] = unified?.suspicious_segments || [];
   const provenance = unified?.provenance || report.provenance;
-  const c2paStatus = provenance?.status || 'unsupported';
+  const c2paStatus = (provenance?.status || provenance?.c2pa_status || 'unsupported').toLowerCase();
   const sha256 = provenance?.sha256;
+
+  const visMod = unified?.visual;
+  const audMod = unified?.audio;
+  const coverage = unified?.analysis_coverage || {};
 
   const cv = report.opencv_visual;
   const gem = report.gemini_audio;
 
-  // Color mappings for qualitative classification
-  const getClassificationMeta = (cls: string) => {
+  // Color mappings for Section 1 qualitative categories
+  const getClassificationMeta = (cls: string, customLabel?: string) => {
     switch (cls) {
+      case 'AI_GENERATED':
       case 'LIKELY_AI_GENERATED':
-        return { label: 'Likely AI-Generated', color: '#8b5cf6', bg: 'rgba(139, 92, 246, 0.12)', border: 'rgba(139, 92, 246, 0.35)', icon: '🤖' };
+        return { label: customLabel || 'Likely AI-Generated', color: '#8b5cf6', bg: 'rgba(139, 92, 246, 0.12)', border: 'rgba(139, 92, 246, 0.35)', icon: '🤖' };
+      case 'PARTIALLY_AI_GENERATED':
       case 'POTENTIALLY_AI_EDITED':
-        return { label: 'Potentially AI-Edited', color: '#6366f1', bg: 'rgba(99, 102, 241, 0.12)', border: 'rgba(99, 102, 241, 0.35)', icon: '✨' };
+        return { label: customLabel || 'Likely Partially AI-Generated / AI-Edited', color: '#6366f1', bg: 'rgba(99, 102, 241, 0.12)', border: 'rgba(99, 102, 241, 0.35)', icon: '✨' };
       case 'POTENTIALLY_FACIAL_MANIPULATION':
-        return { label: 'Potentially Face-Swapped / Manipulated', color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.12)', border: 'rgba(245, 158, 11, 0.35)', icon: '👤' };
+        return { label: customLabel || 'Potentially Face-Swapped / Manipulated', color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.12)', border: 'rgba(245, 158, 11, 0.35)', icon: '👤' };
       case 'POTENTIALLY_SYNTHETIC_SPEECH':
-        return { label: 'Potentially Synthetic Speech', color: '#f43f5e', bg: 'rgba(244, 63, 94, 0.12)', border: 'rgba(244, 63, 94, 0.35)', icon: '🎙️' };
+        return { label: customLabel || 'Potentially Synthetic Speech', color: '#f43f5e', bg: 'rgba(244, 63, 94, 0.12)', border: 'rgba(244, 63, 94, 0.35)', icon: '🎙️' };
+      case 'LIKELY_MANIPULATED':
       case 'CONVENTIONAL_EDITING_DETECTED':
-        return { label: 'Conventionally Edited / Spliced', color: '#06b6d4', bg: 'rgba(6, 182, 212, 0.12)', border: 'rgba(6, 182, 212, 0.35)', icon: '✂️' };
+        return { label: customLabel || 'Likely Manipulated — Origin Undetermined', color: '#06b6d4', bg: 'rgba(6, 182, 212, 0.12)', border: 'rgba(6, 182, 212, 0.35)', icon: '✂️' };
+      case 'LIKELY_AUTHENTIC':
       case 'AUTHENTIC_NO_ANOMALIES_DETECTED':
-        return { label: 'Authentic (No Anomalies Detected)', color: '#10b981', bg: 'rgba(16, 185, 129, 0.12)', border: 'rgba(16, 185, 129, 0.35)', icon: '🛡️' };
+        return { label: customLabel || 'Likely Authentic — No Strong AI Indicators Detected', color: '#10b981', bg: 'rgba(16, 185, 129, 0.12)', border: 'rgba(16, 185, 129, 0.35)', icon: '🛡️' };
       case 'INCONCLUSIVE':
       default:
-        return { label: 'Inconclusive / Mixed Evidence', color: '#94a3b8', bg: 'rgba(148, 163, 184, 0.12)', border: 'rgba(148, 163, 184, 0.35)', icon: '⚖️' };
+        return { label: customLabel || 'Inconclusive', color: '#94a3b8', bg: 'rgba(148, 163, 184, 0.12)', border: 'rgba(148, 163, 184, 0.35)', icon: '⚖️' };
     }
   };
 
-  const meta = getClassificationMeta(classification);
+  const meta = getClassificationMeta(classification, verdictLabel);
 
   const getC2PAColor = (status: string) => {
     switch (status) {
@@ -163,6 +174,11 @@ export function ForensicsPanel({ report }: ForensicsPanelProps) {
                   <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', margin: '0.25rem 0 0', lineHeight: 1.5 }}>
                     {reason}
                   </p>
+                  {confidenceMeaning && (
+                    <p style={{ fontSize: '0.74rem', color: 'var(--text-muted)', margin: '0.2rem 0 0', fontStyle: 'italic' }}>
+                      {confidenceMeaning}
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -189,17 +205,104 @@ export function ForensicsPanel({ report }: ForensicsPanelProps) {
             </div>
           </div>
 
+          {/* ── Independent Modality Coverage Cards (Section 1 & 7) ── */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '0.75rem', marginBottom: '1rem' }}>
+            {/* Visual Modality Card */}
+            <div
+              style={{
+                background: 'rgba(255, 255, 255, 0.02)',
+                border: '1px solid var(--border)',
+                borderRadius: '12px',
+                padding: '0.85rem 1rem',
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <span>🎬</span>
+                  <span style={{ fontSize: '0.74rem', fontWeight: 700, color: 'var(--text-primary)' }}>Visual Modality</span>
+                </div>
+                <span
+                  style={{
+                    fontSize: '0.65rem',
+                    fontWeight: 700,
+                    padding: '0.1rem 0.4rem',
+                    borderRadius: '4px',
+                    background: (visMod?.status || coverage.visual || 'NOT_ANALYZED') === 'COMPLETED' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(107, 114, 128, 0.15)',
+                    color: (visMod?.status || coverage.visual || 'NOT_ANALYZED') === 'COMPLETED' ? '#10b981' : '#94a3b8',
+                  }}
+                >
+                  {visMod?.status || coverage.visual || (cv?.status === 'assessed' ? 'COMPLETED' : 'NOT_ANALYZED')}
+                </span>
+              </div>
+              <div style={{ fontSize: '0.82rem', fontWeight: 800, color: meta.color, marginBottom: '0.25rem' }}>
+                {visMod?.verdict_label || (cv?.anomaly_level === 'elevated' ? 'Likely AI-Generated' : cv?.anomaly_level === 'low' ? 'Likely Authentic' : 'Inconclusive')}
+              </div>
+              <p style={{ margin: 0, fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                {cv?.frames_analyzed || 0} keyframes analyzed (~1 fps) · {cv?.video_resolution || 'Resolution N/A'}
+              </p>
+            </div>
+
+            {/* Audio Modality Card */}
+            <div
+              style={{
+                background: (audMod?.error_code || gem?.status === 'failed') ? 'rgba(239, 68, 68, 0.05)' : 'rgba(255, 255, 255, 0.02)',
+                border: `1px solid ${(audMod?.error_code || gem?.status === 'failed') ? 'rgba(239, 68, 68, 0.3)' : 'var(--border)'}`,
+                borderRadius: '12px',
+                padding: '0.85rem 1rem',
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <span>🎙️</span>
+                  <span style={{ fontSize: '0.74rem', fontWeight: 700, color: 'var(--text-primary)' }}>Audio Modality</span>
+                </div>
+                <span
+                  style={{
+                    fontSize: '0.65rem',
+                    fontWeight: 700,
+                    padding: '0.1rem 0.4rem',
+                    borderRadius: '4px',
+                    background: (audMod?.status || coverage.audio) === 'COMPLETED'
+                      ? 'rgba(16, 185, 129, 0.15)'
+                      : (audMod?.status || coverage.audio) === 'FAILED' || gem?.status === 'failed'
+                      ? 'rgba(239, 68, 68, 0.15)'
+                      : 'rgba(107, 114, 128, 0.15)',
+                    color: (audMod?.status || coverage.audio) === 'COMPLETED'
+                      ? '#10b981'
+                      : (audMod?.status || coverage.audio) === 'FAILED' || gem?.status === 'failed'
+                      ? '#ef4444'
+                      : '#94a3b8',
+                  }}
+                >
+                  {audMod?.status || coverage.audio || (gem?.status === 'assessed' ? 'COMPLETED' : gem?.status === 'failed' ? 'FAILED' : 'NOT_ANALYZED')}
+                </span>
+              </div>
+              <div style={{ fontSize: '0.82rem', fontWeight: 800, color: (audMod?.error_code || gem?.status === 'failed') ? '#ef4444' : 'var(--text-primary)', marginBottom: '0.25rem' }}>
+                {audMod?.verdict_label || (gem?.status === 'failed' ? 'INCONCLUSIVE (DETECTOR TIMEOUT)' : 'Inconclusive')}
+              </div>
+              {(audMod?.error_code || gem?.status === 'failed') ? (
+                <p style={{ margin: 0, fontSize: '0.72rem', color: '#ef4444', lineHeight: 1.4 }}>
+                  ⚠️ Error: <strong>{audMod?.error_code || gem?.error_code || 'DEADLINE_EXCEEDED'}</strong>. Acoustic model timed out. Timeouts are never treated as proof of authenticity.
+                </p>
+              ) : (
+                <p style={{ margin: 0, fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                  {report.technical_audio?.duration_seconds ? `${report.technical_audio.duration_seconds.toFixed(1)}s analyzed` : 'Speech acoustics analyzed'} · Codec {report.technical_audio?.codec_name || 'N/A'}
+                </p>
+              )}
+            </div>
+          </div>
+
           {/* ── Qualitative Forensic Grid (No Unsupported Percentages) ── */}
           <div className="forensics-grid" style={{ marginBottom: '1rem' }}>
             <div className="forensics-stat-card">
               <div className="forensics-stat-value" style={{ color: meta.color, fontSize: '1.05rem', fontWeight: 800 }}>
-                {classification === 'AUTHENTIC_NO_ANOMALIES_DETECTED'
+                {classification === 'AUTHENTIC_NO_ANOMALIES_DETECTED' || classification === 'LIKELY_AUTHENTIC'
                   ? 'Authentic'
-                  : classification === 'CONVENTIONAL_EDITING_DETECTED'
+                  : classification === 'CONVENTIONAL_EDITING_DETECTED' || classification === 'LIKELY_MANIPULATED'
                   ? 'Conventional'
                   : classification === 'INCONCLUSIVE'
                   ? 'Inconclusive'
-                  : 'Manipulated'}
+                  : 'Synthetic / AI'}
               </div>
               <div className="forensics-stat-label">Authenticity Status</div>
             </div>
@@ -362,18 +465,27 @@ export function ForensicsPanel({ report }: ForensicsPanelProps) {
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                      <span
+                      <button
+                        type="button"
+                        onClick={() => onSeek?.(seg.start_time)}
                         style={{
-                          background: 'rgba(245, 158, 11, 0.15)',
+                          background: 'rgba(245, 158, 11, 0.18)',
+                          border: '1px solid rgba(245, 158, 11, 0.35)',
                           color: '#f59e0b',
-                          padding: '0.15rem 0.45rem',
-                          borderRadius: '4px',
+                          padding: '0.15rem 0.5rem',
+                          borderRadius: '6px',
                           fontWeight: 700,
                           fontSize: '0.7rem',
+                          cursor: onSeek ? 'pointer' : 'default',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '0.3rem',
                         }}
+                        title={onSeek ? `Seek video to ${seg.start_time.toFixed(1)}s` : undefined}
                       >
-                        {seg.start_time.toFixed(1)}s - {seg.end_time.toFixed(1)}s
-                      </span>
+                        <span>▶</span>
+                        <span>{seg.start_time.toFixed(1)}s - {seg.end_time.toFixed(1)}s</span>
+                      </button>
                       <span>{seg.description}</span>
                     </div>
                     <span

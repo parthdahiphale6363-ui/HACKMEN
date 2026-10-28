@@ -208,6 +208,75 @@ def audit_audio_authenticity(
     else:
         voice_clone_finding = "Not assessed (Gemini audio audit not available)"
 
+    # 5. Independent Audio Verdict Determination (Section 1 & 7)
+    audio_stream_avail = technical_audio.get("audio_stream_available", True) if technical_audio else True
+    gem_error_code = gemini_audio.get("error_code")
+    duration_analyzed = technical_audio.get("duration_seconds")
+
+    if not audio_stream_avail or (not technical_audio and not gemini_audio):
+        audio_status = "NOT_ANALYZED"
+        audio_verdict = "INCONCLUSIVE"
+        audio_verdict_label = "INCONCLUSIVE"
+        audio_reason = "No audio stream available in input media."
+    elif gem_status == "failed" and tech_status != "assessed":
+        audio_status = "FAILED"
+        audio_verdict = "INCONCLUSIVE"
+        audio_verdict_label = "INCONCLUSIVE"
+        audio_reason = f"Audio analysis failed: {gem_error_code or 'DEADLINE_EXCEEDED'}. Upstream detector timed out."
+    elif gem_status == "failed" and tech_status == "assessed":
+        audio_status = "PARTIAL"
+        audio_verdict = "INCONCLUSIVE"
+        audio_verdict_label = "INCONCLUSIVE"
+        audio_reason = f"Acoustic AI detector failed ({gem_error_code or 'DEADLINE_EXCEEDED'}); technical container metrics assessed without speech audit."
+    elif gem_status == "assessed":
+        if acoustic_score >= 0.65 or ("robotic" in str(gem_anomalies).lower() and acoustic_score >= 0.45):
+            audio_status = "COMPLETED"
+            audio_verdict = "AI_GENERATED"
+            audio_verdict_label = "LIKELY AI-GENERATED"
+            audio_reason = "Auditory analysis detected unnatural pitch flattening, metallic artifacts, or synthetic speech cadence."
+        elif tech_score >= 0.55 and silence_count >= 8:
+            audio_status = "COMPLETED"
+            audio_verdict = "LIKELY_MANIPULATED"
+            audio_verdict_label = "LIKELY MANIPULATED — ORIGIN UNDETERMINED"
+            audio_reason = f"Frequent abrupt silence intervals ({silence_count} cuts) indicate extensive editorial splicing or audio grafting."
+        elif acoustic_score < 0.30 and tech_score < 0.30 and len(gem_anomalies) == 0:
+            audio_status = "COMPLETED"
+            audio_verdict = "LIKELY_AUTHENTIC"
+            audio_verdict_label = "LIKELY AUTHENTIC — NO STRONG AI INDICATORS DETECTED"
+            audio_reason = "Acoustic dynamics, vocal cadence, and background reverberation are consistent with organic speech."
+        else:
+            audio_status = "COMPLETED"
+            audio_verdict = "INCONCLUSIVE"
+            audio_verdict_label = "INCONCLUSIVE"
+            audio_reason = "Acoustic signals are mixed or borderline; insufficient evidence to conclude synthetic voice."
+    else:
+        audio_status = "NOT_ANALYZED"
+        audio_verdict = "INCONCLUSIVE"
+        audio_verdict_label = "INCONCLUSIVE"
+        audio_reason = "Audio analysis was not performed."
+
+    audio_modality_result = {
+        "status": audio_status,
+        "verdict": audio_verdict,
+        "verdict_label": audio_verdict_label,
+        "detector_name": "Google GenAI Audio Forensic Auditor & FFmpeg Stream Analyzer",
+        "detector_version": gemini_audio.get("model_used") or "gemini-2.5-flash / ffmpeg-6.x",
+        "coverage_details": {
+            "duration_analyzed_seconds": duration_analyzed,
+            "sample_rate_hz": sample_rate,
+            "silence_burst_count": silence_count,
+            "clipping_events": clipping_events,
+        },
+        "error_code": gem_error_code,
+        "evidence": evidence_items,
+        "suspicious_segments": suspicious_audio_segments,
+        "limitations": [
+            "Sample rate or bitrate alone does not prove AI generation.",
+            "Speech cadence varies naturally between speakers and recording setups.",
+            "Absence of neural anomalies does not guarantee speech authenticity.",
+        ],
+    }
+
     return {
         "status": "assessed" if (technical_audio.get("status") == "assessed" or gem_status == "assessed") else "not_assessed",
         "technical_anomaly_score": tech_score,
@@ -224,6 +293,7 @@ def audit_audio_authenticity(
         },
         "suspicious_segments": suspicious_audio_segments,
         "evidence": evidence_items,
+        "audio_modality_result": audio_modality_result,
         "limitations": [
             "Sample rate or bitrate alone does not prove AI generation.",
             "Speech cadence varies naturally between speakers and recording setups.",

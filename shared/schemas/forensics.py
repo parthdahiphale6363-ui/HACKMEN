@@ -5,8 +5,33 @@ Defines typed schemas for OpenCV visual analysis and Gemini audio analysis.
 Every result is treated as an anomaly indicator, not absolute proof of manipulation.
 """
 
+from enum import Enum
 from typing import Any, Dict, List, Optional
 from pydantic import BaseModel, Field
+
+
+class ModalityStatus(str, Enum):
+    COMPLETED = "COMPLETED"
+    PARTIAL = "PARTIAL"
+    FAILED = "FAILED"
+    NOT_ANALYZED = "NOT_ANALYZED"
+
+
+class ForensicVerdict(str, Enum):
+    AI_GENERATED = "AI_GENERATED"
+    PARTIALLY_AI_GENERATED = "PARTIALLY_AI_GENERATED"
+    LIKELY_AUTHENTIC = "LIKELY_AUTHENTIC"
+    LIKELY_MANIPULATED = "LIKELY_MANIPULATED"
+    INCONCLUSIVE = "INCONCLUSIVE"
+
+
+VERDICT_DISPLAY_LABELS = {
+    ForensicVerdict.AI_GENERATED.value: "LIKELY AI-GENERATED",
+    ForensicVerdict.PARTIALLY_AI_GENERATED.value: "LIKELY PARTIALLY AI-GENERATED / AI-EDITED",
+    ForensicVerdict.LIKELY_AUTHENTIC.value: "LIKELY AUTHENTIC — NO STRONG AI INDICATORS DETECTED",
+    ForensicVerdict.LIKELY_MANIPULATED.value: "LIKELY MANIPULATED — ORIGIN UNDETERMINED",
+    ForensicVerdict.INCONCLUSIVE.value: "INCONCLUSIVE",
+}
 
 
 class SceneCutAnalysis(BaseModel):
@@ -57,8 +82,10 @@ class OpenCVVisualForensics(BaseModel):
         default="OpenCV keyframe extraction (1 fps) with 2D FFT spectral profiling, Laplacian focus variance, Haar face boundary analysis, and scene difference metrics.",
         description="Methodology description"
     )
-    detector_provenance: str = Field(default="OpenCV 5.0 (cv2) + NumPy signal processing", description="Library/tool provenance")
+    frames_sampled: int = Field(default=0, description="Total keyframe positions targeted for sampling")
     frames_analyzed: int = Field(default=0, description="Number of sampled frames analyzed")
+    sampling_timestamps: List[float] = Field(default_factory=list, description="Timestamps in seconds of sampled frames")
+    skipped_frames: List[Dict[str, Any]] = Field(default_factory=list, description="Frames skipped during processing and reasons")
     video_duration_seconds: Optional[float] = Field(None, description="Total duration of the analyzed video in seconds")
     video_resolution: Optional[str] = Field(None, description="Resolution string (e.g. 640x360)")
     scene_cuts: SceneCutAnalysis = Field(default_factory=SceneCutAnalysis)
@@ -70,6 +97,7 @@ class OpenCVVisualForensics(BaseModel):
     visual_synthetic_score: float = Field(default=0.0, description="Estimated visual synthetic AI generation probability (0 to 1)")
     observed_anomalies: List[str] = Field(default_factory=list, description="Consolidated visual anomaly signals")
     suspicious_segments: List[Dict[str, Any]] = Field(default_factory=list, description="Timestamped suspicious visual intervals")
+    visual_modality_result: Optional[Dict[str, Any]] = Field(default=None, description="Independent visual modality verdict conforming to Section 7 schema")
     limitations: str = Field(
         default="Visual forensic indicators measure statistical and frequency anomalies. They do not constitute deterministic proof of synthetic media generation.",
         description="Caveats and limitations"
@@ -105,6 +133,7 @@ class VoiceCloneAssessment(BaseModel):
 class GeminiAudioForensics(BaseModel):
     status: str = Field(default="not_assessed", description="assessed | not_assessed | failed")
     reason: Optional[str] = Field(None, description="Reason if not assessed or failed (e.g. GEMINI_API_KEY missing)")
+    error_code: Optional[str] = Field(None, description="Explicit error code if failed, e.g. DEADLINE_EXCEEDED, RATE_LIMIT_EXCEEDED")
     methodology: str = Field(
         default="Google GenAI Multimodal native audio analysis with token-level transcript cross-verification and acoustic anomaly audit.",
         description="Methodology description"
@@ -146,20 +175,55 @@ class ProvenanceData(BaseModel):
     disclaimer: str = Field(default="", description="Legal/scientific provenance disclaimer")
 
 
+class ModalityResult(BaseModel):
+    status: str = Field(default="NOT_ANALYZED", description="COMPLETED | PARTIAL | FAILED | NOT_ANALYZED")
+    verdict: str = Field(default="INCONCLUSIVE", description="AI_GENERATED | PARTIALLY_AI_GENERATED | LIKELY_AUTHENTIC | LIKELY_MANIPULATED | INCONCLUSIVE")
+    verdict_label: str = Field(default="INCONCLUSIVE", description="Human-readable verdict label")
+    detector_name: Optional[str] = Field(None, description="Name and identity of detector")
+    detector_version: Optional[str] = Field(None, description="Version or release tag of detector")
+    coverage_details: Dict[str, Any] = Field(default_factory=dict, description="Telemetry: frames sampled, duration, timestamps, skipped reasons")
+    error_code: Optional[str] = Field(None, description="Error code if failed, e.g. DEADLINE_EXCEEDED, NO_AUDIO_STREAM")
+    evidence: List[EvidenceItem] = Field(default_factory=list, description="Modality-specific forensic evidence items")
+    suspicious_segments: List[SuspiciousSegment] = Field(default_factory=list, description="Timestamped intervals within this modality")
+    limitations: List[str] = Field(default_factory=list, description="Modality-specific limitations and disclaimers")
+
+
+class ProvenanceForensicResult(BaseModel):
+    status: str = Field(default="COMPLETED", description="COMPLETED | PARTIAL | FAILED | NOT_ANALYZED")
+    c2pa_status: str = Field(default="NOT_FOUND", description="VERIFIED | INVALID | NOT_FOUND | UNSUPPORTED")
+    sha256: Optional[str] = Field(None, description="SHA-256 hash of original media")
+    is_valid: bool = Field(default=False, description="Cryptographic validity")
+    generator: Optional[str] = Field(None, description="Claim generator application")
+    issuer: Optional[str] = Field(None, description="Digital certificate issuer")
+    actions: List[Dict[str, Any]] = Field(default_factory=list, description="Recorded editing actions")
+    disclaimer: str = Field(default="Absence of credentials is normal for web media and does not prove manipulation.")
+
+
 class UnifiedAuthenticityReport(BaseModel):
+    # Section 7 Unified Forensic Report Schema
+    overall_verdict: str = Field(default="INCONCLUSIVE", description="AI_GENERATED | PARTIALLY_AI_GENERATED | LIKELY_AUTHENTIC | LIKELY_MANIPULATED | INCONCLUSIVE")
+    overall_verdict_label: str = Field(default="INCONCLUSIVE", description="Plain-language human-friendly verdict label")
+    summary: str = Field(default="", description="Plain-language explanation of findings")
+    visual: ModalityResult = Field(default_factory=ModalityResult, description="Independent visual modality verdict and evidence")
+    audio: ModalityResult = Field(default_factory=ModalityResult, description="Independent audio modality verdict and evidence")
+    provenance: ProvenanceForensicResult = Field(default_factory=ProvenanceForensicResult, description="C2PA credentials and file hash integrity")
+    analysis_coverage: Dict[str, str] = Field(default_factory=dict, description="Coverage mapping, e.g. {'visual': 'COMPLETED', 'audio': 'FAILED'}")
+    report_version: str = Field(default="1.0", description="Contract report schema version")
+
+    # Backward-compatible fields
     classification: str = Field(
-        ...,
-        description="One of: LIKELY_AI_GENERATED | POTENTIALLY_AI_EDITED | POTENTIALLY_FACIAL_MANIPULATION | POTENTIALLY_SYNTHETIC_SPEECH | CONVENTIONAL_EDITING_DETECTED | INCONCLUSIVE | AUTHENTIC_NO_ANOMALIES_DETECTED"
+        default="INCONCLUSIVE",
+        description="Legacy classification category (mapped to overall verdict for backward compatibility)"
     )
     confidence_level: str = Field(default="UNCERTAIN", description="HIGH | MEDIUM | LOW | UNCERTAIN")
-    reason: str = Field(..., description="Transparent technical explanation for classification")
-    evidence: List[EvidenceItem] = Field(default_factory=list, description="Structured verified forensic evidence items")
-    suspicious_segments: List[SuspiciousSegment] = Field(default_factory=list, description="Timestamped suspicious media intervals")
-    provenance: ProvenanceData = Field(default_factory=ProvenanceData, description="Cryptographic C2PA and file integrity data")
-    checks_performed: List[str] = Field(default_factory=list, description="Detectors and analyses that executed")
-    checks_unavailable: List[Dict[str, str]] = Field(default_factory=list, description="Detectors not assessed with explicit reasons")
-    limitations: List[str] = Field(default_factory=list, description="Scientific limitations and confidence boundaries")
-    model_versions: Dict[str, str] = Field(default_factory=dict, description="Software and model version provenance")
+    confidence_meaning: str = Field(default="", description="Human-readable explanation of confidence basis and boundaries")
+    reason: str = Field(default="", description="Technical rationale for classification")
+    evidence: List[EvidenceItem] = Field(default_factory=list, description="Consolidated structured evidence items")
+    suspicious_segments: List[SuspiciousSegment] = Field(default_factory=list, description="Consolidated suspicious media intervals")
+    checks_performed: List[str] = Field(default_factory=list, description="List of completed detector checks")
+    checks_unavailable: List[Dict[str, str]] = Field(default_factory=list, description="Detectors unavailable with reasons")
+    limitations: List[str] = Field(default_factory=list, description="Scientific disclaimers and confidence limitations")
+    model_versions: Dict[str, str] = Field(default_factory=dict, description="Software and model provenance mapping")
 
 
 class ForensicsReport(BaseModel):

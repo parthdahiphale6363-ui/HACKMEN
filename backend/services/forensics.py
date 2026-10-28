@@ -776,7 +776,7 @@ def run_forensics_pipeline(
         "summary": (
             f"Forensics analysis: Deepfake probability {int(deepfake['deepfake_probability'] * 100)}%, "
             f"Voice clone probability {int(deepfake['voice_clone_probability'] * 100)}%, "
-            f"Authenticity: {unified_authenticity['classification']} ({unified_authenticity['confidence_level']}), "
+            f"Authenticity: {unified_authenticity.get('overall_verdict_label') or unified_authenticity.get('classification', 'INCONCLUSIVE')} ({unified_authenticity.get('confidence_level', 'UNCERTAIN')}), "
             f"Video integrity {video_integrity_score:.0f}/100, "
             f"Visual anomaly level: {opencv_visual.get('anomaly_level', 'not assessed')}, "
             f"{red_flag_count} red flag(s) detected, "

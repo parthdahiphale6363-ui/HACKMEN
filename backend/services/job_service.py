@@ -623,12 +623,23 @@ def compute_overall_verdict(
     overall = None
 
     # ── Veto Layer 1: Forensics Deepfake / Synthetic Media ──
-    if is_synthetic:
+    unified_report = forensics_report.get("unified_authenticity", {}) if forensics_report else {}
+    overall_v = unified_report.get("overall_verdict")
+    overall_v_label = unified_report.get("overall_verdict_label")
+
+    if is_synthetic or overall_v == "AI_GENERATED":
         final_category = "Deepfake"
-        overall = "Deepfake / Synthetic Media Detected"
+        overall = overall_v_label or "LIKELY AI-GENERATED"
         veto_applied = {
             "type": "forensics_synthetic_veto",
-            "reason": forensics_veto.get("reason") or f"Synthetic audio / deepfake probability ({int(max(deepfake_prob, voice_clone_prob) * 100)}%) exceeds safe threshold",
+            "reason": forensics_veto.get("reason") or unified_report.get("summary") or f"Synthetic audio / deepfake probability ({int(max(deepfake_prob, voice_clone_prob) * 100)}%) exceeds safe threshold",
+        }
+    elif overall_v == "PARTIALLY_AI_GENERATED":
+        final_category = "Manipulated"
+        overall = overall_v_label or "LIKELY PARTIALLY AI-GENERATED / AI-EDITED"
+        veto_applied = {
+            "type": "forensics_partial_synthetic_veto",
+            "reason": unified_report.get("summary") or "Mixture of authentic and synthetic or AI-modified media detected",
         }
 
     # ── Veto Layer 2: OSINT Recycled Footage / Timeline Contradiction ──
@@ -974,17 +985,25 @@ def process_video(job: Job):
             job.dm_report = dm_report
 
             is_synthetic = bool(forensics_report.get("is_synthetic", False))
-            unified_class = forensics_report.get("unified_authenticity", {}).get("classification", "INCONCLUSIVE")
+            unified_report = forensics_report.get("unified_authenticity", {})
+            overall_v = unified_report.get("overall_verdict") or ("AI_GENERATED" if is_synthetic else "INCONCLUSIVE")
+            overall_v_label = unified_report.get("overall_verdict_label") or ("AI-Generated Media (Visual Synthesis Detected)" if (is_synthetic or overall_v == "AI_GENERATED") else "Non-Verbal Media (Visual Forensics Assessed)")
 
-            if is_synthetic or unified_class in ("LIKELY_AI_GENERATED", "POTENTIALLY_FACIAL_MANIPULATION", "POTENTIALLY_SYNTHETIC_SPEECH"):
+            if is_synthetic or overall_v == "AI_GENERATED":
                 job.final_verdict_category = "Deepfake"
-                job.overall_verdict = "AI-Generated Media (Visual Synthesis Detected)"
-            elif unified_class == "AUTHENTIC_NO_ANOMALIES_DETECTED":
+                job.overall_verdict = overall_v_label
+            elif overall_v == "PARTIALLY_AI_GENERATED":
+                job.final_verdict_category = "Manipulated"
+                job.overall_verdict = overall_v_label
+            elif overall_v == "LIKELY_AUTHENTIC":
                 job.final_verdict_category = "True"
-                job.overall_verdict = "Authentic Visual Capture (No Spoken Claims)"
+                job.overall_verdict = overall_v_label
+            elif overall_v == "LIKELY_MANIPULATED":
+                job.final_verdict_category = "Manipulated"
+                job.overall_verdict = overall_v_label
             else:
                 job.final_verdict_category = "Unverified"
-                job.overall_verdict = "Non-Verbal Media (Visual Forensics Assessed)"
+                job.overall_verdict = overall_v_label
 
             job.status = JobStatus.DONE
             job.progress_percent = 100.0

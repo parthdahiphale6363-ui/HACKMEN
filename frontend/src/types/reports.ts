@@ -145,7 +145,30 @@ export interface ProvenanceData {
   disclaimer: string;
 }
 
+export interface ModalityResult {
+  status: 'COMPLETED' | 'PARTIAL' | 'FAILED' | 'NOT_ANALYZED' | string;
+  verdict: 'AI_GENERATED' | 'PARTIALLY_AI_GENERATED' | 'LIKELY_AUTHENTIC' | 'LIKELY_MANIPULATED' | 'INCONCLUSIVE' | string;
+  verdict_label: string;
+  detector_name?: string;
+  detector_version?: string;
+  coverage_details?: Record<string, any>;
+  error_code?: string;
+  evidence: EvidenceItem[];
+  suspicious_segments: SuspiciousSegment[];
+  limitations: string[];
+}
+
 export interface UnifiedAuthenticityReport {
+  overall_verdict?: 'AI_GENERATED' | 'PARTIALLY_AI_GENERATED' | 'LIKELY_AUTHENTIC' | 'LIKELY_MANIPULATED' | 'INCONCLUSIVE' | string;
+  overall_verdict_label?: string;
+  summary?: string;
+  confidence_meaning?: string;
+  visual?: ModalityResult;
+  audio?: ModalityResult;
+  analysis_coverage?: Record<string, string>;
+  report_version?: string;
+
+  // Legacy fields
   classification:
     | 'LIKELY_AI_GENERATED'
     | 'POTENTIALLY_AI_EDITED'
@@ -153,7 +176,8 @@ export interface UnifiedAuthenticityReport {
     | 'POTENTIALLY_SYNTHETIC_SPEECH'
     | 'CONVENTIONAL_EDITING_DETECTED'
     | 'INCONCLUSIVE'
-    | 'AUTHENTIC_NO_ANOMALIES_DETECTED';
+    | 'AUTHENTIC_NO_ANOMALIES_DETECTED'
+    | string;
   confidence_level: 'HIGH' | 'MEDIUM' | 'LOW' | 'UNCERTAIN';
   reason: string;
   evidence: EvidenceItem[];

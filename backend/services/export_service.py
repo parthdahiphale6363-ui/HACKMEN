@@ -55,28 +55,54 @@ def generate_markdown_dossier(
 
     # Forensics Section
     if forensics:
-        md.append("\n---\n## 🔬 Unified Media Authenticity & Deep Forensics")
+        md.append("\n---\n## 🔬 Unified Multimodal Forensics & Media Authenticity")
         
         # Unified Authenticity Engine
         unified = forensics.get("unified_authenticity", {})
         if unified:
-            verdict_text = unified.get('classification') or unified.get('verdict')
-            md.append(f"### 🛡️ Authenticity Classification: **`{verdict_text}`** ({unified.get('confidence_level')} Confidence)")
-            md.append(f"- **Primary Finding:** {unified.get('reason')}")
+            verdict_code = unified.get("overall_verdict") or unified.get("verdict") or "INCONCLUSIVE"
+            verdict_label = unified.get("overall_verdict_label") or unified.get("classification") or verdict_code
+            confidence_level = unified.get("confidence_level", "UNCERTAIN")
+            conf_meaning = unified.get("confidence_meaning", "")
             
-            # C2PA Provenance
-            prov = unified.get("provenance", {}) or forensics.get("provenance", {})
-            c2pa_status = prov.get("status", "unsupported")
-            sha256_hash = prov.get("sha256")
-            md.append(f"- **Cryptographic SHA-256:** `{sha256_hash or 'Not computed'}`")
-            md.append(f"- **C2PA Content Credentials:** `{c2pa_status.upper()}`" + (f" (Issuer: {prov.get('issuer')}, Generator: {prov.get('generator')})" if prov.get("issuer") else ""))
+            md.append(f"### 🛡️ Final Forensic Determination: **`{verdict_label}`**")
+            md.append(f"- **Verdict Code:** `{verdict_code}` ({confidence_level} Confidence)")
+            if conf_meaning:
+                md.append(f"- **Confidence Basis:** {conf_meaning}")
+            md.append(f"- **Technical Summary:** {unified.get('summary') or unified.get('reason')}")
+            
+            # Coverage Breakdown Table
+            coverage = unified.get("analysis_coverage", {})
+            vis_m = unified.get("visual", {})
+            aud_m = unified.get("audio", {})
+            prov_m = unified.get("provenance", {})
+
+            md.append("\n#### 📋 Modality Coverage & Independent Conclusions")
+            md.append("| Modality | Execution Status | Independent Verdict | Detector Provenance | Error / Code |")
+            md.append("|---|---|---|---|---|")
+            md.append(f"| **Visual (Video/Frames)** | `{vis_m.get('status', 'NOT_ANALYZED')}` | `{vis_m.get('verdict_label', 'N/A')}` | {vis_m.get('detector_name', 'OpenCV')} | {vis_m.get('error_code') or 'None'} |")
+            md.append(f"| **Audio (Speech/Acoustic)** | `{aud_m.get('status', 'NOT_ANALYZED')}` | `{aud_m.get('verdict_label', 'N/A')}` | {aud_m.get('detector_name', 'Gemini Audio')} | {aud_m.get('error_code') or 'None'} |")
+            md.append(f"| **Provenance (C2PA/SHA-256)** | `{prov_m.get('status', 'NOT_ANALYZED')}` | `{prov_m.get('c2pa_status', 'NOT_FOUND')}` | C2PA Content Credentials | None |")
+
+            # C2PA Provenance Details
+            sha256_hash = prov_m.get("sha256") or (forensics.get("provenance", {}) or {}).get("sha256")
+            md.append(f"\n- **Cryptographic File Digest:** `SHA256:{sha256_hash or 'Not computed'}`")
+            if prov_m.get("issuer"):
+                md.append(f"- **Content Credentials Origin:** Signed by `{prov_m.get('issuer')}` using `{prov_m.get('generator')}`")
             
             # Suspicious Segments
             segs = unified.get("suspicious_segments", [])
             if segs:
-                md.append("\n#### ⏱️ Suspicious Media Intervals")
+                md.append("\n#### ⏱️ Traceable Suspicious Media Intervals")
                 for s in segs:
                     md.append(f"- `{s.get('start_time', 0.0):.1f}s - {s.get('end_time', 0.0):.1f}s`: **{s.get('anomaly_type')}** ({s.get('severity')}) — *{s.get('description')}*")
+
+            # Scientific Limitations
+            limits = unified.get("limitations", [])
+            if limits:
+                md.append("\n#### ⚖️ Scientific Limitations & Forensic Boundaries")
+                for lim in limits:
+                    md.append(f"- *{lim}*")
 
         deepfake_pct = round(forensics.get("deepfake_probability", 0) * 100)
         voice_pct = round(forensics.get("voice_clone_probability", 0) * 100)
