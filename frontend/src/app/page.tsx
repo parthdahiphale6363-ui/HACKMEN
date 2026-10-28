@@ -236,11 +236,23 @@ export default function Home() {
     setVideoScore(0); setAudioScore(0); setMetadataScore(0); setOsintScore(0); setDmScore(0);
     setActiveDemoCase(null); setSeekSec(null); setClaimFilter('all'); setClaimSearch('');
     setStage('extracting'); setProgress(5);
-    try {
       const res = await fetch('/api/jobs', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ video_url: cleanUrl }) });
-      if (res.ok) { const job = await res.json(); setJobId(job.id); }
-      else { setErrorMessage('Failed to submit job. Is the backend running?'); setStage('failed'); }
-    } catch { setErrorMessage('Failed to connect to backend. Please check that the server is running.'); setStage('failed'); }
+      if (res.ok) {
+        const job = await res.json();
+        setJobId(job.id);
+      } else {
+        const errData = await res.json().catch(() => null);
+        const triedHosts = errData?.tried?.map((t: any) => t.base).join(', ');
+        const msg = errData?.message
+          ? `Connection to backend failed (${errData.message}). If on Render Free Tier, please ensure your truthlens-backend service has finished deploying, or wait 30 seconds for it to wake up and click Try Again.`
+          : 'Failed to submit job. If on Render Free Tier, the backend takes ~30 seconds to wake up from sleep. Please wait a moment and click Try Again.';
+        setErrorMessage(msg);
+        setStage('failed');
+      }
+    } catch {
+      setErrorMessage('Failed to connect to backend. On Render Free Tier, the backend spins down when idle and takes ~30 seconds to wake up. Please click Try Again.');
+      setStage('failed');
+    }
   };
 
   const handleSeek = (seconds: number) => {

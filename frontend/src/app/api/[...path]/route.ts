@@ -2,21 +2,38 @@ import { NextRequest, NextResponse } from 'next/server';
 
 let _cachedWorkingBase: string | null = null;
 
-function getCandidateBases(): string[] {
-  const envUrls = [
+function getCandidateBases(req?: NextRequest): string[] {
+  const envList = [
     process.env.BACKEND_URL,
     process.env.NEXT_PUBLIC_BACKEND_URL,
-  ]
-    .filter((u): u is string => Boolean(u && u.trim()))
-    .map(u => {
-      let trimmed = u.trim().replace(/\/$/, '');
-      if (!trimmed.startsWith('http://') && !trimmed.startsWith('https://')) {
-        trimmed = `https://${trimmed}`;
+  ].filter((u): u is string => Boolean(u && u.trim()));
+
+  const expandedEnvUrls: string[] = [];
+  for (const raw of envList) {
+    let trimmed = raw.trim().replace(/\/$/, '');
+    if (!trimmed.startsWith('http://') && !trimmed.startsWith('https://')) {
+      // If Render fromService assigned bare hostname "truthlens-backend", add public onrender.com domain
+      if (!trimmed.includes('.') && !trimmed.includes(':')) {
+        expandedEnvUrls.push(`https://${trimmed}.onrender.com`);
       }
-      return trimmed;
-    });
+      trimmed = `https://${trimmed}`;
+    }
+    expandedEnvUrls.push(trimmed);
+  }
+
+  // Derive backend URL from incoming request host if running on Render
+  // (e.g. truthlens-frontend-xxxx.onrender.com -> truthlens-backend-xxxx.onrender.com)
+  const host = req?.headers.get('host') || '';
+  const derivedUrls: string[] = [];
+  if (host.includes('onrender.com')) {
+    if (host.includes('frontend')) {
+      derivedUrls.push(`https://${host.replace('-frontend', '-backend').replace('frontend', 'backend')}`);
+    }
+    derivedUrls.push('https://truthlens-backend.onrender.com');
+  }
 
   const cloudInternalUrls = [
+    'https://truthlens-backend.onrender.com',
     'http://truthlens-backend:10000',
     'http://truthlens-backend:8000',
     'http://truthlens-backend',
@@ -33,8 +50,8 @@ function getCandidateBases(): string[] {
   ];
 
   const order = _cachedWorkingBase
-    ? [_cachedWorkingBase, ...envUrls, ...cloudInternalUrls, ...localUrls]
-    : [...envUrls, ...cloudInternalUrls, ...localUrls];
+    ? [_cachedWorkingBase, ...expandedEnvUrls, ...derivedUrls, ...cloudInternalUrls, ...localUrls]
+    : [...expandedEnvUrls, ...derivedUrls, ...cloudInternalUrls, ...localUrls];
 
   return Array.from(new Set(order));
 }
@@ -43,7 +60,7 @@ async function handleProxy(req: NextRequest, params: { path?: string[] }) {
   const pathSegments = params.path || [];
   const pathStr = pathSegments.join('/');
   const search = req.nextUrl.search || '';
-  const candidates = getCandidateBases();
+  const candidates = getCandidateBases(req);
 
   const isBodyMethod = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method);
   const rawBody = isBodyMethod ? await req.arrayBuffer() : undefined;
