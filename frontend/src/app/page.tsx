@@ -365,8 +365,11 @@ export default function Home() {
 
   return (
     <>
+      <a href="#main-content" className="skip-nav-link">
+        Skip to main content
+      </a>
       <PixelWorldBackground />
-      <div className={`page-wrap${stage === 'idle' ? ' idle-page-wrap' : ''}`}>
+      <main id="main-content" className={`page-wrap${stage === 'idle' ? ' idle-page-wrap' : ''}`}>
         {/* ── Top Brand Bar ── */}
         <div className="top-brand-bar">
           <div className="top-brand-left">
@@ -432,9 +435,12 @@ export default function Home() {
           </header>
 
           <div className="url-section">
-          <form onSubmit={handleSubmit} className="url-form-container">
+          <form onSubmit={handleSubmit} className="url-form-container" role="search" aria-label="YouTube Shorts URL Analysis Form">
+            <label htmlFor="video-url-input" className="sr-only">
+              YouTube Shorts Video URL
+            </label>
             <div className="url-command-bar">
-              <div className="url-platform-icon" title="YouTube Shorts Input">
+              <div className="url-platform-icon" title="YouTube Shorts Input" aria-hidden="true">
                 <span className="yt-badge">▶</span>
               </div>
               <input
@@ -445,6 +451,7 @@ export default function Home() {
                 value={url}
                 onChange={e => setUrl(e.target.value)}
                 aria-label="YouTube Shorts URL"
+                aria-required="true"
                 required
               />
               {url && (
@@ -499,9 +506,17 @@ export default function Home() {
 
             {idleTab === 'cases' ? (
               <div className="demo-cards-row">
-                <div className="demo-card" onClick={() => loadDemoCase('deepfake_scam')} title="Click to inspect this real deepfake case">
+                <div
+                  className="demo-card"
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => loadDemoCase('deepfake_scam')}
+                  onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); loadDemoCase('deepfake_scam'); } }}
+                  aria-label="Inspect Elon Musk AI Scam & Crypto Bait deepfake case"
+                  title="Click to inspect this real deepfake case"
+                >
                   <div className="demo-card-top">
-                    <span className="demo-card-icon">⚡</span>
+                    <span className="demo-card-icon" aria-hidden="true">⚡</span>
                     <span className="demo-card-badge" style={{ background: 'rgba(239, 68, 68, 0.15)', color: '#ef4444' }}>Deepfake 94%</span>
                   </div>
                   <div className="demo-card-title">Elon Musk AI Scam &amp; Crypto Bait</div>
@@ -509,9 +524,17 @@ export default function Home() {
                   <div className="demo-card-action">Inspect Case ↗</div>
                 </div>
 
-                <div className="demo-card" onClick={() => loadDemoCase('science_myths')} title="Click to inspect this peer-reviewed science fact-check">
+                <div
+                  className="demo-card"
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => loadDemoCase('science_myths')}
+                  onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); loadDemoCase('science_myths'); } }}
+                  aria-label="Inspect Venom Genes & Human Empathy peer-reviewed fact-check case"
+                  title="Click to inspect this peer-reviewed science fact-check"
+                >
                   <div className="demo-card-top">
-                    <span className="demo-card-icon">🧬</span>
+                    <span className="demo-card-icon" aria-hidden="true">🧬</span>
                     <span className="demo-card-badge" style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#10b981' }}>Verified 89%</span>
                   </div>
                   <div className="demo-card-title">Venom Genes &amp; Human Empathy</div>
@@ -519,9 +542,17 @@ export default function Home() {
                   <div className="demo-card-action">Inspect Case ↗</div>
                 </div>
 
-                <div className="demo-card" onClick={() => loadDemoCase('geopolitical_disinfo')} title="Click to inspect this video CGI manipulation case">
+                <div
+                  className="demo-card"
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => loadDemoCase('geopolitical_disinfo')}
+                  onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); loadDemoCase('geopolitical_disinfo'); } }}
+                  aria-label="Inspect Recycled Combat Video & Bot CGI manipulation case"
+                  title="Click to inspect this video CGI manipulation case"
+                >
                   <div className="demo-card-top">
-                    <span className="demo-card-icon">🛡️</span>
+                    <span className="demo-card-icon" aria-hidden="true">🛡️</span>
                     <span className="demo-card-badge" style={{ background: 'rgba(245, 158, 11, 0.15)', color: '#f59e0b' }}>Manipulated 96%</span>
                   </div>
                   <div className="demo-card-title">Recycled Combat Video &amp; Bot CGI</div>
@@ -885,15 +916,27 @@ export default function Home() {
               {/* Filter & Search Bar */}
               <div className="claim-controls-bar">
                 <div className="claim-search-wrap">
+                  <label htmlFor="claim-search-input" className="sr-only">
+                    Filter claims by keywords, sources, or entities
+                  </label>
                   <input
+                    id="claim-search-input"
                     type="text"
                     className="claim-search-input"
                     placeholder="Filter claims by keywords, sources, or entities…"
                     value={claimSearch}
                     onChange={e => setClaimSearch(e.target.value)}
+                    aria-label="Filter claims by keywords, sources, or entities"
                   />
                   {claimSearch && (
-                    <button className="claim-search-clear" onClick={() => setClaimSearch('')}>✕</button>
+                    <button
+                      type="button"
+                      className="claim-search-clear"
+                      onClick={() => setClaimSearch('')}
+                      aria-label="Clear claim search filter"
+                    >
+                      ✕
+                    </button>
                   )}
                 </div>
 
@@ -1017,7 +1060,7 @@ export default function Home() {
       />
 
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-      </div>
+      </main>
       {stage !== 'idle' && <MistralCatFooter />}
     </>
   );

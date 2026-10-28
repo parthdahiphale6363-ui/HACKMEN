@@ -153,7 +153,7 @@
   --shadow-accent: 0 4px 20px rgba(99, 102, 241, 0.3);
 }
 
-/* ─── Reset ──────────────────────────────────────────────────────────── */
+/* ─── Reset & Accessibility ─────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html {
   scroll-behavior: smooth;
@@ -172,6 +172,47 @@ body {
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* WCAG 2.1 AA Keyboard Focus Visibility */
+:focus-visible {
+  outline: 2px solid var(--accent, #6366f1) !important;
+  outline-offset: 2px !important;
+}
+
+/* Accessible Screen Reader Only Utility */
+.sr-only {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+/* Accessible Skip Navigation Link */
+.skip-nav-link {
+  position: absolute;
+  top: -999px;
+  left: -999px;
+  z-index: 99999;
+  background: #4f46e5;
+  color: #ffffff !important;
+  padding: 0.65rem 1.25rem;
+  font-size: 0.88rem;
+  font-weight: 700;
+  border-radius: 8px;
+  box-shadow: 0 4px 18px rgba(79, 70, 229, 0.45);
+  text-decoration: none;
+  transition: top 0.15s ease;
+}
+
+.skip-nav-link:focus {
+  top: 12px;
+  left: 12px;
 }
 
 /* ─── Layout ─────────────────────────────────────────────────────────── */

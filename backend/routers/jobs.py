@@ -53,6 +53,15 @@ async def health_check():
         }
 
 def validate_video_url(url: str) -> bool:
+    """
+    Validates whether a video URL or file path is supported by the ingestion pipeline.
+
+    Args:
+        url (str): Target URL or local file path to evaluate.
+
+    Returns:
+        bool: True if URL belongs to an allowed video hosting domain or valid test path.
+    """
     # Allow local paths for testing
     if not url.startswith("http://") and not url.startswith("https://"):
         return True
@@ -64,7 +73,18 @@ def validate_video_url(url: str) -> bool:
     except Exception:
         return False
 
+
 def check_rate_limit(api_key: str) -> bool:
+    """
+    Evaluates rolling-window rate limits for a given API key.
+    Enforces a strict threshold of max 5 video ingestion jobs per rolling hour.
+
+    Args:
+        api_key (str): Client API key to check against quota.
+
+    Returns:
+        bool: True if request is within quota, False if limit is exceeded.
+    """
     now = time.time()
     one_hour_ago = now - 3600
 
@@ -80,7 +100,8 @@ def check_rate_limit(api_key: str) -> bool:
             redis_client.expire(key, 3600)
             return True
         except Exception as e:
-            print(f"[RateLimit] Redis error: {e}. Falling back to in-memory.")
+            import logging
+            logging.getLogger("uvicorn.error").warning(f"[RateLimit] Redis error: {e}. Falling back to in-memory.")
 
     timestamps = rate_limit_db[api_key]
     timestamps = [t for t in timestamps if t > one_hour_ago]
@@ -90,13 +111,46 @@ def check_rate_limit(api_key: str) -> bool:
     rate_limit_db[api_key].append(now)
     return True
 
+
 from backend.services.security_validation import validate_media_url, validate_media_file
+from pydantic import Field
+
 
 class JobCreate(BaseModel):
-    video_url: str
+    """
+    Request payload schema for submitting a media verification job.
+    Includes bounds validation to prevent buffer exhaustion and SSRF.
+    """
+    video_url: str = Field(
+        ...,
+        min_length=1,
+        max_length=2048,
+        description="Public YouTube Shorts URL or verified test media path.",
+        json_schema_extra={"example": "https://www.youtube.com/shorts/dQw4w9WgXcQ"}
+    )
 
-@router.post("")
-async def create_job(req: JobCreate, x_api_key: str = Header(None)):
+
+@router.post("", summary="Submit Video Verification Job", response_model=Job, tags=["Verification Pipeline"])
+async def create_job(req: JobCreate, x_api_key: str = Header(None)) -> Job:
+    """
+    Submits a video URL for multimodal ingestion, deepfake forensics, and claim verification.
+
+    Performs defense-in-depth security checks:
+    - SSRF IP & DNS resolution filtering.
+    - Local path traversal rejection.
+    - Domain allowlist validation (YouTube & Vimeo).
+    - API Key authentication and rolling-window rate limiting.
+
+    Args:
+        req (JobCreate): Request body containing target video URL.
+        x_api_key (str, optional): Authentication header for rate-limited endpoints.
+
+    Returns:
+        Job: Enqueued job object with unique UUID and initial 'pending' status.
+
+    Raises:
+        HTTPException: 400 for security/protocol violations, 401 for unauthorized, 429 for rate limit.
+    """
     raw_url = req.video_url.strip()
 
     # 1. SSRF and Media Ingestion Security Validation
@@ -123,7 +177,7 @@ async def create_job(req: JobCreate, x_api_key: str = Header(None)):
             detail="Unsupported video platform. Only YouTube and Vimeo URLs are allowed."
         )
 
-    # 2. API Key and Rate Limit validation
+    # 3. API Key and Rate Limit validation
     allowed_keys_str = os.getenv("API_KEYS", "")
     if allowed_keys_str:
         allowed_keys = [k.strip() for k in allowed_keys_str.split(",") if k.strip()]
@@ -138,23 +192,53 @@ async def create_job(req: JobCreate, x_api_key: str = Header(None)):
     enqueue_job(str(job.id))
     return job
 
-@router.get("/demo-cases")
-@router.get("/demo_cases")
-async def get_demo_cases():
-    """Returns curated multimodal demonstration cases for instant zero-latency evaluation."""
+@router.get("/demo-cases", summary="Get Demonstration Cases", operation_id="get_demo_cases_primary", tags=["Demo Suite"])
+@router.get("/demo_cases", summary="Get Demonstration Cases (Legacy)", operation_id="get_demo_cases_legacy", tags=["Demo Suite"])
+async def get_demo_cases() -> dict:
+    """
+    Returns curated multimodal demonstration cases for instant zero-latency evaluation.
+
+    Provides pre-computed, verified benchmarks spanning deepfake audio, misinformation,
+    and organic broadcast samples with complete forensic and OSINT dossiers.
+
+    Returns:
+        dict: Collection of indexed demonstration cases keyed by case ID.
+    """
     from backend.services.demo_cases import DEMO_CASES
     return DEMO_CASES
 
 
-@router.get("/{job_id}/export_markdown")
+@router.get("/{job_id}/export_markdown", summary="Export Job Dossier as Markdown", tags=["Export & Audit"])
 async def export_job_dossier_markdown(job_id: str):
+    """
+    Exports a comprehensive forensic dossier formatted as human-readable Markdown.
+
+    Args:
+        job_id (str): Unique job identifier (UUID) or demo case ID.
+
+    Returns:
+        PlainTextResponse: Formatted markdown document containing full audit trail.
+    """
     return await export_job_dossier(job_id=job_id, format="markdown")
 
 
-@router.get("/{job_id}/export")
+@router.get("/{job_id}/export", summary="Export Structured Forensic Dossier", tags=["Export & Audit"])
 async def export_job_dossier(job_id: str, format: str = "json"):
     """
     Exports a comprehensive forensic dossier in structured JSON or Markdown report format.
+
+    Generates cryptographic SHA-256 audit hashes over verdict claims and scores
+    to guarantee evidence integrity and tamper resistance.
+
+    Args:
+        job_id (str): Unique identifier of the target verification job.
+        format (str, optional): Desired format ('json' or 'markdown'). Defaults to 'json'.
+
+    Returns:
+        Union[dict, PlainTextResponse]: Structured forensic dossier payload or markdown file.
+
+    Raises:
+        HTTPException: 404 if job ID is not found in database or demonstration suite.
     """
     from backend.services.demo_cases import DEMO_CASES
     from backend.services.export_service import generate_markdown_dossier
@@ -229,8 +313,20 @@ async def export_job_dossier(job_id: str, format: str = "json"):
     return job_data
 
 
-@router.get("/{job_id}")
+@router.get("/{job_id}", summary="Get Job Details", tags=["Verification Pipeline"])
 async def get_job(job_id: str):
+    """
+    Retrieves execution state, progress, and overall verdict scores for a submitted job.
+
+    Args:
+        job_id (str): Unique job UUID or demo case ID.
+
+    Returns:
+        Job or dict: Current job entity including progress status and verdict breakdown.
+
+    Raises:
+        HTTPException: 404 if the specified job ID is not found.
+    """
     from backend.services.demo_cases import DEMO_CASES
     for key, case in DEMO_CASES.items():
         if case.get("id") == job_id or key == job_id:
@@ -239,8 +335,21 @@ async def get_job(job_id: str):
         raise HTTPException(status_code=404, detail="Job not found")
     return jobs_db[job_id]
 
-@router.get("/{job_id}/claims")
-async def get_claims(job_id: str):
+
+@router.get("/{job_id}/claims", summary="Get Extracted Claims & Verdicts", tags=["Verification Pipeline"])
+async def get_claims(job_id: str) -> list:
+    """
+    Retrieves all extracted factual claims, web retrieval citations, and truth verdicts for a job.
+
+    Args:
+        job_id (str): Unique job identifier.
+
+    Returns:
+        list: Collection of verified claims with multi-source citations and confidence scores.
+
+    Raises:
+        HTTPException: 404 if job does not exist.
+    """
     from backend.services.demo_cases import DEMO_CASES
     for key, case in DEMO_CASES.items():
         if case.get("id") == job_id or key == job_id:
@@ -251,8 +360,21 @@ async def get_claims(job_id: str):
         return []
     raise HTTPException(status_code=404, detail="Job not found")
 
-@router.get("/{job_id}/transcript")
-async def get_transcript(job_id: str):
+
+@router.get("/{job_id}/transcript", summary="Get Synchronized Transcript", tags=["Verification Pipeline"])
+async def get_transcript(job_id: str) -> list:
+    """
+    Retrieves timestamp-synchronized speech transcription segments for the video.
+
+    Args:
+        job_id (str): Unique job identifier.
+
+    Returns:
+        list: Collection of transcript segments with start/end timestamps and text.
+
+    Raises:
+        HTTPException: 404 if job does not exist.
+    """
     from backend.services.demo_cases import DEMO_CASES
     for key, case in DEMO_CASES.items():
         if case.get("id") == job_id or key == job_id:
@@ -263,9 +385,22 @@ async def get_transcript(job_id: str):
         return []
     raise HTTPException(status_code=404, detail="Job not found")
 
-@router.get("/{job_id}/forensics")
-async def get_forensics(job_id: str):
-    """Return the full forensics analysis report for a job."""
+
+@router.get("/{job_id}/forensics", summary="Get Audio-Visual Forensics Report", tags=["Verification Pipeline"])
+async def get_forensics(job_id: str) -> dict:
+    """
+    Returns the comprehensive audio-visual forensics analysis report for a job.
+    Includes 2D-FFT spectral rolloff, ELA metrics, C2PA provenance, and deepfake probability.
+
+    Args:
+        job_id (str): Unique job identifier.
+
+    Returns:
+        dict: Forensic analysis report including red flags and synthetic probabilities.
+
+    Raises:
+        HTTPException: 404 if job does not exist.
+    """
     from backend.services.demo_cases import DEMO_CASES
     for key, case in DEMO_CASES.items():
         if case.get("id") == job_id or key == job_id:
@@ -276,9 +411,22 @@ async def get_forensics(job_id: str):
         return {}
     raise HTTPException(status_code=404, detail="Job not found")
 
-@router.get("/{job_id}/osint")
-async def get_osint(job_id: str):
-    """Return the OSINT collection report for a job."""
+
+@router.get("/{job_id}/osint", summary="Get OSINT Intelligence Report", tags=["Verification Pipeline"])
+async def get_osint(job_id: str) -> dict:
+    """
+    Returns the open-source intelligence (OSINT) collection report for a job.
+    Includes Wayback Machine historical archive status, WHOIS domain age, and authority metrics.
+
+    Args:
+        job_id (str): Unique job identifier.
+
+    Returns:
+        dict: OSINT collection report with domain intelligence and cross-platform matches.
+
+    Raises:
+        HTTPException: 404 if job does not exist.
+    """
     from backend.services.demo_cases import DEMO_CASES
     for key, case in DEMO_CASES.items():
         if case.get("id") == job_id or key == job_id:
@@ -289,9 +437,22 @@ async def get_osint(job_id: str):
         return {}
     raise HTTPException(status_code=404, detail="Job not found")
 
-@router.get("/{job_id}/dm_report")
-async def get_dm_report(job_id: str):
-    """Return the Data Mining analysis report for a job."""
+
+@router.get("/{job_id}/dm_report", summary="Get Data Mining Report", tags=["Verification Pipeline"])
+async def get_dm_report(job_id: str) -> dict:
+    """
+    Returns the automated data mining and pattern discovery report for a job.
+    Includes named entity co-occurrence graphs, cluster topics, and sentiment dispersion.
+
+    Args:
+        job_id (str): Unique job identifier.
+
+    Returns:
+        dict: Data mining intelligence report with entity networks and cluster anomalies.
+
+    Raises:
+        HTTPException: 404 if job does not exist.
+    """
     from backend.services.demo_cases import DEMO_CASES
     for key, case in DEMO_CASES.items():
         if case.get("id") == job_id or key == job_id:
@@ -303,8 +464,21 @@ async def get_dm_report(job_id: str):
     raise HTTPException(status_code=404, detail="Job not found")
 
 
-@router.get("/{job_id}/stream")
+@router.get("/{job_id}/stream", summary="Server-Sent Events (SSE) Live Stream", tags=["Verification Pipeline"])
 async def stream_job_events(job_id: str):
+    """
+    Establishes a real-time Server-Sent Events (SSE) connection streaming pipeline events.
+    Pushes granular updates as transcript chunks, forensic markers, and claim verdicts are verified.
+
+    Args:
+        job_id (str): Unique identifier of the actively processing job.
+
+    Returns:
+        StreamingResponse: SSE stream emitting 'claim', 'done', or 'error' events.
+
+    Raises:
+        HTTPException: 404 if the job ID is not recognized.
+    """
     if job_id not in jobs_db:
         raise HTTPException(status_code=404, detail="Job not found")
 
