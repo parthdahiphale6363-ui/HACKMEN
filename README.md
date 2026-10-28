@@ -2,375 +2,375 @@
 
 <div align="center">
 
-[![Live Production App](https://img.shields.io/badge/🚀_LIVE_PRODUCTION_DEMO-CLICK_TO_LAUNCH_APP-6366f1?style=for-the-badge&logo=railway&logoColor=white&labelColor=0B0D0E)](https://multimodal-video-forensics-fact-checking-engine.up.railway.app/)
-[![Automated Tests](https://img.shields.io/badge/Automated_Tests-52%2F52_Passing_(100%25)-10b981?style=for-the-badge&logo=pytest&logoColor=white)](https://github.com/parthdahiphale6363-ui/HACKMEN)
+[![Live Production Demo](https://img.shields.io/badge/🚀_RENDER_LIVE_DEMO-CLICK_TO_LAUNCH_APP-6366f1?style=for-the-badge&logo=render&logoColor=white&labelColor=0B0D0E)](https://truthlens-frontend-bisr.onrender.com)
+[![Automated Tests](https://img.shields.io/badge/Automated_Tests-159%2F159_Passing_(100%25)-10b981?style=for-the-badge&logo=pytest&logoColor=white)](https://github.com/parthdahiphale6363-ui/HACKMEN)
 [![Python Version](https://img.shields.io/badge/Backend-FastAPI%20%7C%20Python%203.12-4f46e5?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
 [![Frontend](https://img.shields.io/badge/Frontend-Next.js%2016%20%7C%20React%2019-0ea5e9?style=for-the-badge&logo=nextdotjs&logoColor=white)](https://nextjs.org)
-[![Cloud Host](https://img.shields.io/badge/Cloud_Host-Railway_PaaS-0B0D0E?style=for-the-badge&logo=railway&logoColor=white)](https://railway.app)
+[![Docker](https://img.shields.io/badge/Container-Docker%20Multi--Stage-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://www.docker.com)
 [![License](https://img.shields.io/badge/License-MIT-blue?style=for-the-badge)](LICENSE)
 
-### 🌐 **[👉 Open Live Interactive Web Application 👈](https://multimodal-video-forensics-fact-checking-engine.up.railway.app/)**
-**Live Production URL:** `https://multimodal-video-forensics-fact-checking-engine.up.railway.app/`
+### 🌐 **[👉 Open Live Interactive Web Application 👈](https://truthlens-frontend-bisr.onrender.com)**
+**Live Production URL:** `https://truthlens-frontend-bisr.onrender.com`
 
-*An advanced multimodal intelligence system that verifies short-form viral videos (YouTube Shorts) by combining OpenCV computer vision forensics, acoustic telemetry, real-time web fact-checking (OSINT), and cryptographic audit dossiers.*
+*A research-grade multimodal intelligence platform that audits short-form viral media (YouTube Shorts) by fusing OpenCV computer vision forensics, acoustic telemetry, atomic proposition extraction, real-time live web fact-checking (RAG), and data mining narrative anomaly governors.*
 
 </div>
 
 ---
 
-## 📖 Table of Contents
-1. [What is TruthLens AI?](#-what-is-truthlens-ai)
-2. [Supported Inputs](#-supported-inputs)
-3. [The 5-Level Forensic Verdict System](#-the-5-level-forensic-verdict-system)
-4. [How It Works (The 4-Track Pipeline)](#-how-it-works-the-4-track-pipeline)
-5. [Built-in Case Studies (Zero Latency)](#-built-in-case-studies-zero-latency)
-6. [☁️ Railway Cloud Deployment Guide (Exhaustive)](#️-railway-cloud-deployment-guide-exhaustive)
-   - [Railway Configuration Files in This Project](#railway-configuration-files-in-this-project)
-   - [Architecture on Railway](#architecture-on-railway)
-   - [Step 1: Deploy Backend Service](#step-1-deploy-backend-service)
-   - [Step 2: Deploy Frontend Service](#step-2-deploy-frontend-service)
-   - [Private Networking (.railway.internal)](#private-networking-railwayinternal)
-7. [💻 Local Development & Quick Start](#-local-development--quick-start)
-8. [🧪 Automated Testing & Verification](#-automated-testing--verification)
-9. [📁 File & Directory Map](#-file--directory-map)
-10. [📄 License & Ethics](#-license--ethics)
+## 📸 Platform Showcase & User Interface
+
+TruthLens AI features a custom cyber-forensics laboratory interface built with zero-latency instant demonstration cases, real-time interactive playback, and transparent evidence trails:
+
+### 1. Interactive Hero Dashboard & Instant Scenarios
+The primary portal allows one-click analysis of any YouTube Shorts URL or instant zero-latency forensic case inspection:
+<p align="center">
+  <img src="./screenshots/01_hero_dashboard.png" alt="TruthLens AI Hero Dashboard" width="100%" />
+</p>
 
 ---
 
-## 💡 What is TruthLens AI?
-
-Think of **TruthLens AI** as an **AI-powered forensic laboratory and digital investigator** for viral video clips.
-
-When millions of people watch a video on social media, two critical questions must be answered:
-1. **Is the media real, AI-generated, or tampered with?** (Deepfake faces, synthetic cloned voices, spliced cuts, altered frames).
-2. **Are the spoken claims true, misleading, or outright false?** (Cross-referenced against verified news, scientific journals, and certified fact-checkers).
-
-TruthLens AI answers both questions at the same time using an evidence-first approach:
-- **No Hallucinations**: Every fact-check is backed by verbatim quote citations from verified domains.
-- **Traceable Timestamps**: Clickable video timestamps jump right to the suspicious frame or audio interval.
-- **Independent Modalities**: Visuals and audio are tested separately so you know exactly which part was manipulated.
-- **Cryptographic Audit Dossier**: Download a SHA-256 signed Markdown report with a complete chain of custody.
+### 2. Real-Time 6-Stage Forensic Pipeline & Synced Video Player
+Live pipeline execution tracker monitoring every stage of analysis alongside a synchronized transcript viewer:
+<p align="center">
+  <img src="./screenshots/02_pipeline_execution.png" alt="TruthLens AI Pipeline Execution & Player" width="100%" />
+</p>
 
 ---
 
-## 🎬 Supported Inputs
-
-> [!IMPORTANT]
-> **YouTube Shorts Only**: TruthLens AI is specifically optimized for short-form viral videos.
-> - **Supported:** `https://www.youtube.com/shorts/VIDEO_ID` (or `https://youtube.com/shorts/...`)
-> - **Not Supported:** Standard long-form YouTube videos (`/watch?v=`), playlists, TikTok, Instagram, or local files. The backend URL gate validates and strictly enforces Shorts format.
-
----
-
-## ⚖️ The 5-Level Forensic Verdict System
-
-TruthLens AI evaluates media against 5 clear, technically defensible verdict categories:
-
-| Verdict Category | Display Label | Meaning | Example |
-|---|---|---|---|
-| **A. AI-Generated** | `LIKELY AI-GENERATED` | Strong detector evidence confirms synthetic creation in video, audio, or both. | Sora/Runway AI video, or fully synthesized ElevenLabs cloned voice. |
-| **B. Partially AI-Generated** | `LIKELY PARTIALLY AI-GENERATED / AI-EDITED` | Media contains a mixture of genuine and synthetic/modified elements. | Authentic news footage with an AI voiceover narration, or real video with deepfake face swap. |
-| **C. Likely Authentic** | `LIKELY AUTHENTIC — NO STRONG AI INDICATORS DETECTED` | No anomalies detected across assessed streams. Includes honest disclaimer that undetected AI manipulation remains possible. | Raw camera footage from a verified phone or camera with natural acoustics. |
-| **D. Likely Manipulated** | `LIKELY MANIPULATED — ORIGIN UNDETERMINED` | Credible signs of editing, splicing, or compression mismatch, but origin cannot be proven as AI. | Re-encoded video with abrupt scene jump-cuts or truncated audio. |
-| **E. Inconclusive** | `INCONCLUSIVE` | Resolution too low, duration too short, models timed out, or conflicting signals. | Low-bitrate 144p clip, silent video without visual faces, or network timeout. |
-
-> [!NOTE]
-> **Modality Independence Invariant**: If one modality fails (e.g. audio times out), it is **never** treated as proof of authenticity. The system marks that modality as `FAILED` and bases its overall verdict solely on the successful modality.
+### 3. Traceable Claim Verification & Evidence Consensus Engine
+Every spoken claim is isolated into atomic propositions, verified against live authoritative web sources, and given an explainable verdict with exact source snippet citations:
+<p align="center">
+  <img src="./screenshots/03_claim_evidence_verification.png" alt="TruthLens AI Claim Verification Engine" width="100%" />
+</p>
 
 ---
 
-## 🔬 How It Works (The 4-Track Pipeline)
+### 4. Data Mining Narrative Classifier & Anomaly Governor
+Cluster analysis, outlier detection, and association rule mining that actively calibrates confidence and vetoes false claims:
+<p align="center">
+  <img src="./screenshots/04_data_mining_analysis.png" alt="TruthLens AI Data Mining Analysis" width="100%" />
+</p>
+
+---
+
+## 🎯 Chosen Vertical & Problem Statement
+
+### **Vertical:** AI Safety, Multimodal Media Forensics, & Real-Time Automated Fact-Checking
+
+### The Crisis in Short-Form Viral Media
+Short-form viral videos (YouTube Shorts, Instagram Reels, TikTok) have become the primary source of news and information for over 2 billion people worldwide. However, this format presents acute vulnerabilities:
+1. **Hyper-Velocity Disinformation:** Sensationalized falsehoods spread 6x faster than factual debunkings.
+2. **Multimodal Deception:** Bad actors combine synthetic AI voice clones with genuine footage, or splice authentic interviews into deceptive narratives with deepfake lip-syncing.
+3. **Context Stripping:** Video game footage (such as ARMA 3) or recycled decades-old military footage is routinely repackaged as breaking warfare news.
+4. **Human Verification Bottleneck:** Manual fact-checking takes hours to days—long after a 30-second clip has accumulated tens of millions of views.
+
+### Our Solution
+**TruthLens AI** bridges this gap by deploying an automated, research-grade forensics lab that evaluates media across **all layers simultaneously** in under 60 seconds:
+- **Visual Pixels:** Detects spatial compression artifacts and generative frequency anomalies.
+- **Acoustic Audio:** Identifies voice synthesis, neural vocoder fingerprints, and unnatural splice gaps.
+- **Spoken Text:** Decomposes speech into verifiable factual assertions and cross-references them against live scientific, journalistic, and IFCN certified repositories.
+- **Narrative Data Mining:** Detects coordinated deception templates and mathematical discourse outliers.
+
+---
+
+## 🧠 Approach & Logic
+
+TruthLens AI is built on the **Modality Separation & Epistemic Evidence Principle**. Unlike naive black-box detectors that output a single unexplainable probability, TruthLens enforces rigorous forensic independence:
 
 ```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                       Uploaded YouTube Shorts URL                           │
-└──────────────────────────────────────┬──────────────────────────────────────┘
-                                       │
-                    yt-dlp Demux (Video Stream + Audio Stream)
-                                       │
-        ┌──────────────────────────────┴──────────────────────────────┐
-        ▼                                                             ▼
-┌───────────────────────────────┐             ┌───────────────────────────────┐
-│  Track 1: Visual Forensics    │             │  Track 2: Audio Forensics     │
-│  • OpenCV frame sampling      │             │  • FFprobe acoustic streams   │
-│  • Error Level Analysis (ELA) │             │  • Silence burst anomalies    │
-│  • 2D FFT spectral analysis   │             │  • Gemini multimodal analysis │
-│  • Face boundary jitter       │             │  • Voice clone probability    │
-│  • Scene-cut detection        │             │  • 504 timeout recovery       │
-└───────────────┬───────────────┘             └───────────────┬───────────────┘
-                │                                             │
-        ┌───────┴─────────────────────────────────────────────┴───────┐
-        ▼                                                             ▼
-┌───────────────────────────────┐             ┌───────────────────────────────┐
-│  Track 3: Epistemic Claims    │             │  Track 4: OSINT & Patterns    │
-│  • Groq Whisper Large v3      │             │  • Google Fact Check (IFCN)   │
-│  • Groq Llama 3.3 70B claims  │             │  • NewsAPI & NewsData.io      │
-│  • DuckDuckGo search          │             │  • DuckDuckGo / Wikipedia RAG │
-│  • Verbatim quote offset      │             │  • Isolation Forest outliers  │
-└───────────────┬───────────────┘             └───────────────┬───────────────┘
-                │                                             │
-                └──────────────────────┬──────────────────────┘
-                                       ▼
-        ┌─────────────────────────────────────────────────────────────┐
-        │  Evidence Fusion Engine & Sovereign Constitutional Veto     │
-        │  • If Deepfake ≥ 70% or IFCN Debunked: Overrides to FALSE   │
-        │  • 5-Factor Calibrated Composite Confidence Score           │
-        └──────────────────────────────┬──────────────────────────────┘
-                                       ▼
-        ┌─────────────────────────────────────────────────────────────┐
-        │  Interactive Reactive Dashboard + SHA-256 Audit Dossier    │
-        └─────────────────────────────────────────────────────────────┘
+                                  Uploaded Video URL
+                                          │
+                        yt-dlp Demux (Video + Audio Streams)
+                                          │
+       ┌──────────────────┬───────────────┴───────────────┬──────────────────┐
+       ▼                  ▼                               ▼                  ▼
+┌──────────────┐   ┌──────────────┐              ┌────────────────┐   ┌──────────────┐
+│ Track 1:     │   │ Track 2:     │              │ Track 3:       │   │ Track 4:     │
+│ Visual       │   │ Acoustic     │              │ Factual Claims │   │ Data Mining  │
+│ Forensics    │   │ Telemetry    │              │ & Live RAG     │   │ & Patterns   │
+│              │   │              │              │                │   │              │
+│ • OpenCV ELA │   │ • FFprobe    │              │ • Groq Whisper │   │ • Clustering │
+│ • 2D FFT     │   │ • Silence    │              │ • Atomic Claims│   │ • Outliers   │
+│   Spectra    │   │   Bursts     │              │ • Multi-Search │   │ • Assoc.     │
+│ • Frame-Diff │   │ • Gemini     │              │ • BM25 Ranking │     Rules        │
+│ • Lighting   │   │   Audit      │              │ • LLM Reasoner │   │ • Template   │
+│   Coherence  │   │ • VoCoder    │              │ • Exact Quotes │     Governor     │
+└──────┬───────┘   └──────┬───────┘              └────────┬───────┘   └──────┬───────┘
+       │                  │                               │                  │
+       └──────────────────┴───────────────┬───────────────┴──────────────────┘
+                                          ▼
+                      ┌───────────────────────────────────────┐
+                      │    Unified Evidence Fusion Engine     │
+                      │  • Sovereign Deepfake Veto Rule       │
+                      │  • Cross-Modality Consistency Audit   │
+                      │  • 5-Level Calibrated Final Verdict   │
+                      └───────────────────┬───────────────────┘
+                                          ▼
+                      ┌───────────────────────────────────────┐
+                      │   SHA-256 Signed Forensic Dossier     │
+                      └───────────────────────────────────────┘
 ```
 
----
+### 1. Visual Stream Forensics (Spatial & Frequency Domain)
+- **Error Level Analysis (ELA):** Analyzes JPEG compression error variance across keyframes to reveal localized tampering, pasted elements, and synthetic overlays.
+- **2D Fast Fourier Transform (FFT):** Calculates radial frequency distributions. Diffusion models and GANs leave distinct high-frequency spectral artifacts and unnatural symmetry peaks that natural lenses never produce.
+- **Temporal Frame-to-Frame Variance:** Tracks motion vector consistency and structural similarity (SSIM) across cut boundaries to identify artificial frame interpolation or unnatural face-warping jitter.
 
-## 🧪 Built-in Case Studies (Zero Latency)
+### 2. Acoustic Telemetry & Multimodal Audio Forensics
+- **Acoustic Profiling:** Analyzes sampling frequencies (e.g. 22.05 kHz vs 44.1 kHz), bitrates, and channel configurations to flag common neural TTS output patterns.
+- **Silence Burst & Splice Detection:** Detects micro-silence gaps (<15ms) and abrupt phase shifts indicative of sentence grafting or dialogue splicing.
+- **Google Gemini 2.5 Flash Acoustic Audit:** Conducts deep multimodal reasoning on speech cadence, unnatural pitch stabilization, breath pauses, and robotic formant synthesis.
 
-Want to see TruthLens AI in action without waiting for download and processing? Click any built-in scenario on the dashboard:
+### 3. Atomic Claim Extraction & Epistemic Fact-Checking (RAG)
+- **Safe Proposition Decomposition:** Intelligently splits complex compound sentences into atomic factual propositions while strictly preserving numbers, abbreviations, currencies (`Rs.`, `$`, `€`, `₹`), and measurement units (`km/h`, `%`, `per barrel`).
+- **Pre-Flight Ambiguity Guard:** Automatically flags statements with contradictory price quotes or mutually exclusive claims.
+- **Parallel Multi-Engine Search:** Executes concurrent targeted search queries across DuckDuckGo, NewsAPI.org, NewsData.io, and the Google Fact Check Tools API (IFCN database).
+- **BM25 Retrieval & Stance Classification:** Ranks retrieved web evidence items, filters out spam/unrelated content, and passes high-relevance evidence to a Groq-powered reasoning engine.
+- **Epistemic Honesty Rule:** Claims are marked `TRUE` or `FALSE` only when supported by direct, verifiable URL citations. An absence of search results yields `UNVERIFIED`—the system **never** infers that a claim is false simply because web evidence was not found.
 
-1. **⚡ Elon Musk AI Scam & Crypto Bait**:
-   - *Anomaly*: Synthetic voice clone paired with an advance-fee crypto giveaway template.
-   - *Result*: Sovereign Veto triggered $\rightarrow$ **FALSE (Deepfake)**, 94% Severity.
-2. **🧬 Venom Genes & Human Empathy**:
-   - *Anomaly*: Transcript normalized into scientific queries cross-referenced with PNAS genomics and Anthrozoös psychology research.
-   - *Result*: **TRUE (Verified)**, 89% Integrity with verbatim quote offsets.
-3. **🛡️ Recycled Combat Video & Bot CGI**:
-   - *Anomaly*: ARMA 3 video game combat footage passed off as live warfare.
-   - *Result*: IFCN Debunk triggered $\rightarrow$ **MISLEADING (Recycled CGI)**, 96% Severity.
-
----
-
-## ☁️ Railway Cloud Deployment Guide (Exhaustive)
-
-TruthLens AI is designed with native cloud configurations for instant, reliable deployment on **[Railway](https://railway.app)**.
-
-### Railway Configuration Files in This Project
-
-This repository includes pre-configured deployment definitions:
-
-| File Path | Component | Purpose |
-|---|---|---|
-| [`railway.json`](file:///c:/Parth%202D/railway.json) | **Backend Service** | Configures Railway build (`DOCKERFILE`), custom start command, healthcheck path (`/health`), 120s timeout, and auto-restart policy. |
-| [`Dockerfile`](file:///c:/Parth%202D/Dockerfile) | **Backend Container** | Lightweight Debian (`python:3.12-slim`) base installing `ffmpeg`, `curl`, `nodejs` (for yt-dlp challenges), Python dependencies, and starts Uvicorn on dynamic `${PORT}`. |
-| [`frontend/railway.json`](file:///c:/Parth%202D/frontend/railway.json) | **Frontend Service** | Configures Next.js service on Railway using `NIXPACKS` or Dockerfile, starts Next on `${PORT:-3000}` with healthcheck at `/`. |
-| [`frontend/Dockerfile`](file:///c:/Parth%202D/frontend/Dockerfile) | **Frontend Container** | Multi-stage Node.js 20 Alpine container building Next.js 16 with optimized standalone caching and telemetry disabled. |
-| [`frontend/src/app/api/[...path]/route.ts`](file:///c:/Parth%202D/frontend/src/app/api/%5B...path%5D/route.ts) | **Dynamic Cloud Proxy** | Resolves internal Railway private networking (`.railway.internal`), public URLs, and local loopbacks automatically with zero manual proxy configuration. |
+### 4. Data Mining Narrative Anomaly Governor
+- **Narrative Clustering & Outliers:** Groups extracted statements into topical clusters using TF-IDF feature matrices and computes z-score distribution anomalies.
+- **Apriori Association Rules:** Discovers underlying linguistic dependencies between claims to detect common coordinated misinformation templates (e.g. *crypto giveaway bait*, *advance-fee scam*, *sensationalized health cure*).
+- **Sovereign Governor Veto:** If severe data mining suspicion or external IFCN debunks are triggered, the engine automatically overrides and vetoes any false genuine verdict.
 
 ---
 
-### Architecture on Railway
+## ⚙️ How the Solution Works (6-Stage Pipeline)
 
-```
-                   ┌────────────────────────────────────────────────────────┐
-                   │                     Railway Project                    │
-                   │                                                        │
-┌──────────────┐   │  ┌───────────────────────┐   Internal Private Net      │
-│ User Browser │───┼─>│ Frontend Service      │  (Zero egress bandwidth)    │
-│              │   │  │ Next.js 16 (Port 3000)│──────────────┐              │
-└──────────────┘   │  └───────────────────────┘              │              │
-                   │                                         ▼              │
-                   │                              ┌──────────────────────┐  │
-                   │                              │ Backend Service      │  │
-                   │                              │ FastAPI (Port 8000)  │  │
-                   │                              │ FFmpeg + yt-dlp      │  │
-                   │                              └──────────────────────┘  │
-                   └────────────────────────────────────────────────────────┘
-```
+When a user submits a YouTube Shorts URL, the system executes an automated 6-stage lifecycle:
+
+| Stage | Name | Description | Key Technologies |
+| :---: | :--- | :--- | :--- |
+| **01** | **Ingestion & Validation** | Validates YouTube Shorts URL structure, checks against SSRF vulnerabilities, and extracts video/audio streams. | `yt-dlp`, `Pydantic v2`, Regex Security Gates |
+| **02** | **Audio Preparation & Transcription** | Normalizes audio loudness with FFmpeg `loudnorm`, converts sample rates to 16 kHz mono, and transcribes speech into English. | `FFmpeg`, `Groq Whisper large-v3-turbo` |
+| **03** | **Atomic Claim Extraction** | Extracts up to 5 key verifiable factual assertions, preserving currencies, dates, and quantitative bounds. | `Groq Qwen 2.5 32B`, NLP Proposition Splitter |
+| **04** | **Multimodal Forensics** | Evaluates video frames via OpenCV ELA/FFT and conducts acoustic analysis via Google Gemini 2.5 Flash concurrently. | `OpenCV (cv2)`, `NumPy`, `Google Gemini 2.5 Flash` |
+| **05** | **Real-Time Fact-Checking** | Executes live web search across multiple APIs, scores consensus, and produces citable quote offsets. | `DuckDuckGo`, `NewsAPI`, `Google Fact Check API`, `BM25` |
+| **06** | **Verdict Synthesis & Export** | Fuses visual, audio, claim, and OSINT evidence into a unified verdict and compiles a SHA-256 cryptographic dossier. | `Evidence Fusion Engine`, `SHA-256`, Next.js UI |
 
 ---
 
-### Step 1: Deploy Backend Service
+## 🛠️ Technologies Used
 
-1. Log in to [Railway.com](https://railway.app) and create a **New Project**.
-2. Select **Deploy from GitHub repo** and pick this repository.
-3. Railway will detect the root [`railway.json`](file:///c:/Parth%202D/railway.json) and [`Dockerfile`](file:///c:/Parth%202D/Dockerfile).
-4. In the service **Variables** tab, add your environment variables:
-   ```ini
-   # Required for AI Reasoning and Whisper Transcription
-   GROQ_API_KEY=gsk_your_groq_api_key_here
+### Backend Architecture
+- **Language & Runtime:** Python 3.12 (Selected for high-performance async processing and scientific package compatibility).
+- **Web Framework:** [FastAPI](https://fastapi.tiangolo.com/) with [Uvicorn](https://www.uvicorn.org/) ASGI server.
+- **Validation & Schemas:** [Pydantic v2](https://docs.pydantic.dev/) for strict type contracts and input sanitization.
+- **Asynchronous Task Queue:** Native Python `asyncio` task runners with threadpool execution for CPU-bound OpenCV tasks.
 
-   # Optional for Deep Audio & Voice Forensics
-   GEMINI_API_KEY=AIzaSy_your_gemini_api_key_here
-   GEMINI_TIMEOUT_SECONDS=25.0
+### AI & Deep Learning Inference
+- **Audio Transcription & Translation:** [Groq Cloud](https://groq.com/) running `whisper-large-v3-turbo` with multi-key round-robin rotation.
+- **Factual Reasoning & Claims NLP:** `qwen/qwen3.8-27b` and `llama-3.3-70b-versatile` hosted on Groq LPU inference engines.
+- **Multimodal Audio Forensics:** [Google Gemini 2.5 Flash](https://ai.google.dev/) multimodal API with automated 504 deadline fallback recovery.
 
-   # Optional OSINT API Keys (System uses DuckDuckGo/Wikipedia if omitted)
-   GOOGLE_FACTCHECK_API_KEY=your_google_key_here
-   NEWS_API_KEY=your_newsapi_org_key_here
-   NEWSDATA_API_KEY=your_newsdata_io_key_here
+### Computer Vision & Audio Engineering
+- **Image & Frame Forensics:** [OpenCV (`cv2`)](https://opencv.org/) and [NumPy](https://numpy.org/) for Error Level Analysis (ELA), 2D Fast Fourier Transform (FFT), Laplacian variance, and pixel difference mapping.
+- **Audio Demuxing & Normalization:** [FFmpeg](https://ffmpeg.org/) and `ffprobe` for two-pass loudness normalization (`loudnorm`) and 16 kHz acoustic preparation.
+- **Stream Extraction:** [yt-dlp](https://github.com/yt-dlp/yt-dlp) for robust YouTube Shorts stream extraction.
 
-   # Environment setting
-   ENVIRONMENT=production
-   ```
-5. In **Settings** $\rightarrow$ **Networking**, click **Generate Domain** (e.g. `truthlens-api.up.railway.app`).
-6. Verify deployment by visiting `https://your-backend.up.railway.app/health`. You should see `{"status": "ok"}`.
+### Fact-Checking, Search & OSINT
+- **Multi-Engine Retrieval:** DuckDuckGo Search API, [NewsAPI.org](https://newsapi.org/), [NewsData.io](https://newsdata.io/).
+- **Fact-Check Databases:** [Google Fact Check Tools API](https://toolbox.google.com/factcheck/apis) (International Fact-Checking Network / IFCN).
+- **Ranking & Consensus:** Custom BM25 lexical ranking and multi-source consensus scoring algorithms.
 
----
+### Data Mining & Pattern Analysis
+- **Machine Learning & Analytics:** [Scikit-learn](https://scikit-learn.org/) for TF-IDF vectorization and clustering.
+- **Pattern Mining:** Apriori association rule generation and Z-score statistical outlier detection.
 
-### Step 2: Deploy Frontend Service
+### Frontend User Interface
+- **Framework:** [Next.js 16](https://nextjs.org/) (App Router) with [React 19](https://react.dev/) and [TypeScript](https://www.typescriptlang.org/).
+- **Design System:** Bespoke cyber-forensics design system using modular Vanilla CSS (no Tailwind dependency) featuring dynamic glassmorphism, responsive status banners, and interactive video timestamp seeking.
+- **Icons & Visualization:** [Lucide React](https://lucide.dev/).
 
-1. In the **same Railway project**, click **+ New Service** $\rightarrow$ **GitHub Repo** $\rightarrow$ select the same repository.
-2. In the newly created service, go to **Settings**:
-   - **Root Directory**: Set to `/frontend`
-   - **Build**: Uses [`frontend/railway.json`](file:///c:/Parth%202D/frontend/railway.json) (or [`frontend/Dockerfile`](file:///c:/Parth%202D/frontend/Dockerfile)).
-3. In the service **Variables** tab, set:
-   ```ini
-   # Point to your backend's public domain or internal network name
-   BACKEND_URL=https://your-backend.up.railway.app
-   NEXT_PUBLIC_BACKEND_URL=https://your-backend.up.railway.app
-   ```
-4. In **Settings** $\rightarrow$ **Networking**, click **Generate Domain** (e.g. `truthlens.up.railway.app`).
-5. Open your public domain in your browser!
+### Cloud & DevOps
+- **Containerization:** Multi-stage Docker images ([Dockerfile](Dockerfile) and [frontend/Dockerfile](frontend/Dockerfile)).
+- **Cloud PaaS:** [Render](https://render.com) (native [render.yaml](render.yaml) Blueprint) and [Railway](https://railway.app) ([railway.json](railway.json)).
+- **Testing:** [Pytest](https://docs.pytest.org/) with **159 automated tests passing at 100%**.
 
 ---
 
-### Private Networking (`.railway.internal`)
+## ⚖️ The 5-Level Calibrated Forensic Verdict System
 
-Railway supports direct container-to-container private networking with zero egress costs and minimal latency:
-- If your backend service is named `backend`, you can set your frontend variable to:
-  ```ini
-  BACKEND_URL=http://backend.railway.internal:8000
-  ```
-- TruthLens AI's dynamic proxy [`frontend/src/app/api/[...path]/route.ts`](file:///c:/Parth%202D/frontend/src/app/api/%5B...path%5D/route.ts) automatically discovers `.railway.internal` hosts and routes requests privately behind the scenes.
+TruthLens AI synthesizes all multimodal findings into one of five definitive, mathematically defensible verdicts:
+
+| Verdict Category | Visual Badge | Forensic Definition | Real-World Example |
+| :--- | :---: | :--- | :--- |
+| **Likely AI-Generated** | `DEEPFAKE` | Convincing empirical detector evidence confirms generative synthesis in visual frames, voice track, or both. | Sora video generation, or an ElevenLabs cloned voice impersonating an official. |
+| **Partially AI-Generated** | `MANIPULATED` | Media contains a blend of authentic capture and synthetic elements. | Real broadcast news video altered with an AI voiceover, or deepfake face swap on a real body. |
+| **Likely Authentic** | `LIKELY AUTHENTIC` | Assessed streams display natural camera sensor noise, coherent acoustic harmonics, and zero generative flags. | Legitimate on-the-ground mobile phone recording with authentic ambient audio. |
+| **Likely Manipulated** | `MANIPULATED` | Credible signs of non-AI splicing, frame drops, misleading cuts, or out-of-context re-use. | Video game footage (ARMA 3) presented as live combat, or cropped context. |
+| **Unverified / Inconclusive** | `UNVERIFIED` | Resolution too degraded, audio silent, or external search evidence insufficient to establish a definitive ruling. | 144p heavily compressed video, silent non-verbal clip, or search network timeout. |
 
 ---
 
-## 💻 Local Development & Quick Start
+## 🚀 Deployment Guide
 
-### Prerequisites
+### Option 1: Automated 1-Click Deploy on Render (Recommended)
+
+This repository includes a native [render.yaml](render.yaml) Blueprint that sets up both the FastAPI backend and Next.js frontend automatically.
+
+1. Fork or push this repository to your GitHub account.
+2. Sign in to [Render.com](https://render.com).
+3. Click **New +** ➔ **Blueprint**.
+4. Select your connected repository (`parthdahiphale6363-ui/HACKMEN`).
+5. Render will detect `render.yaml` and prompt you for your environment variables:
+   - `GROQ_API_KEY`: Your Groq API key(s)
+   - `GEMINI_API_KEY`: Your Google Gemini API key
+   - `NEWS_API_KEY`: NewsAPI.org key
+   - `NEWSDATA_API_KEY`: NewsData.io key
+   - `GOOGLE_FACTCHECK_API_KEY`: Google Fact Check API key
+6. Click **Apply**. Render will automatically build both Docker containers and deploy your live app.
+
+> [!TIP]
+> On Render's Free tier, services spin down after 15 minutes of inactivity. When visiting the site after an idle period, allow 30–40 seconds for the backend container to wake up.
+
+---
+
+### Option 2: Deployment on Railway
+
+TruthLens AI includes dedicated Railway configuration files:
+- [railway.json](railway.json) (Backend configuration)
+- [frontend/railway.json](frontend/railway.json) (Frontend configuration)
+
+1. Open [Railway.app](https://railway.app) and create a **New Project**.
+2. Select **Deploy from GitHub repo**.
+3. Railway will deploy the backend using `Dockerfile` on dynamic port `${PORT}`.
+4. Add a second service from the same repo with Root Directory `/frontend`.
+5. Set `BACKEND_URL` in the frontend service pointing to your backend's URL.
+
+---
+
+### Option 3: Local Development Setup
+
+#### Prerequisites
 - **Python 3.11 or 3.12**
 - **Node.js 20 or 22**
 - **FFmpeg** installed and added to your system `PATH`
 
-### 1. Clone & Set Up Python Environment
+#### 1. Clone & Setup Backend
 ```bash
 git clone https://github.com/parthdahiphale6363-ui/HACKMEN.git
 cd HACKMEN
 
-# Create and activate virtual environment
+# Create virtual environment
 python -m venv venv
 # Windows:
 .\venv\Scripts\activate
 # macOS/Linux:
 source venv/bin/activate
 
-# Install Python dependencies
+# Install dependencies
 pip install -r requirements.txt
 ```
 
-### 2. Set Up Frontend
+#### 2. Setup Frontend
 ```bash
 cd frontend
 npm install
 cd ..
 ```
 
-### 3. Environment Variables
+#### 3. Environment Variables
 Create a `.env` file in the project root:
 ```ini
-GROQ_API_KEY=gsk_your_groq_api_key
-GEMINI_API_KEY=AIzaSy_your_gemini_api_key
-GEMINI_TIMEOUT_SECONDS=25.0
+GROQ_API_KEY=gsk_your_key_here
+GEMINI_API_KEY=your_gemini_key_here
+NEWS_API_KEY=your_newsapi_key
+NEWSDATA_API_KEY=your_newsdata_key
+GOOGLE_FACTCHECK_API_KEY=your_google_key
 PORT=8000
 ```
 
-### 4. Run the Project
+#### 4. Run Locally
+- **One-Click (Windows):** Run `./run.bat`
+- **Manual:**
+  ```bash
+  # Terminal 1: Backend
+  uvicorn backend.main:app --host 0.0.0.0 --port 8000 --reload
 
-#### Option A: One-Click Startup (Windows)
-```bat
-run.bat
-```
-
-#### Option B: Manual Startup
-```bash
-# Terminal 1: Launch FastAPI Backend
-uvicorn backend.main:app --host 0.0.0.0 --port 8000 --reload
-
-# Terminal 2: Launch Next.js Frontend
-cd frontend
-npm run dev
-```
-
-- **Frontend App**: `http://localhost:3000`
-- **FastAPI Interactive Docs**: `http://localhost:8000/docs`
-- **Backend Health Check**: `http://localhost:8000/health`
+  # Terminal 2: Frontend
+  cd frontend
+  npm run dev
+  ```
+- **Frontend App:** `http://localhost:3000`
+- **Swagger Docs:** `http://localhost:8000/docs`
 
 ---
 
-## 🧪 Automated Testing & Verification
+## 🧪 Automated Testing & Quality Assurance
 
-TruthLens AI includes a complete automated test suite covering unit tests, SSRF validation, multi-modal evidence fusion, timeout handling, and frontend contracts:
+TruthLens AI enforces complete automated test coverage with **159 passing tests**:
 
 ```bash
-# Run all tests
+# Run all tests across the repository
 python -m pytest tests/ -v
 ```
 
-### Key Test Suites:
-- `tests/test_unified_forensics_verdicts.py`: Validates all 5 verdict categories, `504 DEADLINE_EXCEEDED` recovery, and API key sanitization.
-- `tests/test_unified_media_authenticity.py`: Validates C2PA provenance credentials, SSRF protection, and script mismatch detection.
-- `tests/test_opencv_gemini_forensics.py`: Validates Error Level Analysis (ELA), 2D FFT spectral regularity, and face jitter heuristics.
-- `tests/test_complete_frontend_and_backend.py`: Validates end-to-end pipeline flow, dossier cryptographic hashing, and OSINT consensus.
+### Core Verification Suites:
+- `tests/test_claim_extraction_and_verdicts.py`: Validates atomic claim preservation, currency/unit bounds, and search error fallbacks.
+- `tests/test_unified_forensics_verdicts.py`: Validates all 5 forensic verdict categories, multimodal fusion, and API sanitization.
+- `tests/test_factcheck_accuracy.py`: Tests epistemic boundaries, verbatim quote offsets, and prevents fabricated citations.
+- `tests/test_opencv_gemini_forensics.py`: Tests Error Level Analysis (ELA) math, 2D FFT spectral profiling, and acoustic analysis.
+- `tests/test_strong_osint_forensics_datamining.py`: Tests association rule mining, outlier z-score detection, and recycled footage anti-spoofing.
+- `tests/test_unified_media_authenticity.py`: Validates C2PA Content Credentials provenance, SSRF blocking, and SHA-256 integrity.
 
 ---
 
-## 📁 File & Directory Map
+## 📂 Project Architecture Map
 
 ```
-.
+TruthLens-AI/
 ├── backend/
-│   ├── main.py                     # FastAPI entry point, CORS, dynamic port handling
+│   ├── main.py                     # FastAPI entry point, CORS, and health endpoints
 │   ├── routers/
-│   │   ├── jobs.py                 # Job lifecycle, SSE events, export endpoints
-│   │   └── health.py               # Health checks and latency metrics
+│   │   ├── jobs.py                 # Job lifecycle, SSE events, and dossier export
+│   │   └── health.py               # Health checks and latency telemetry
 │   └── services/
-│       ├── job_service.py          # Background worker dispatcher & veto aggregation
-│       ├── visual_forensics.py     # OpenCV ELA, FFT, and scene boundary analysis
-│       ├── gemini_audio.py         # Gemini multimodal audio audit with 504 timeout recovery
+│       ├── job_service.py          # Pipeline worker dispatcher & overall verdict engine
+│       ├── visual_forensics.py     # OpenCV ELA, 2D FFT, and frame difference analysis
+│       ├── gemini_audio.py         # Google Gemini 2.5 Flash multimodal acoustic audit
 │       ├── audio_authenticity.py   # Acoustic stream validation & voice clone metrics
-│       ├── evidence_fusion.py      # Multi-modal priority rules & Section 7 contract synthesis
+│       ├── evidence_fusion.py      # Sovereign veto rules & Section 7 unified report
 │       ├── osint.py                # Google Fact Check Tools API, NewsAPI, NewsData.io
-│       ├── data_mining.py          # TF-IDF, Isolation Forest, and scam template similarity
+│       ├── data_mining.py          # Clustering, Apriori association rules, outlier z-scores
 │       ├── demo_cases.py           # Pre-loaded zero-latency demonstration scenarios
-│       └── export_service.py       # Tamper-evident SHA-256 Markdown dossier generator
+│       └── export_service.py       # SHA-256 signed Markdown dossier generator
 ├── frontend/
+│   ├── src/
+│   │   ├── app/
+│   │   │   ├── page.tsx            # Interactive cyber-forensics dashboard
+│   │   │   └── api/[...path]/      # Intelligent dynamic proxy with auto-discovery
+│   │   └── components/             # Reusable UI widgets, banners, and modals
 │   ├── Dockerfile                  # Production Next.js 16 container definition
-│   ├── railway.json                # Railway configuration for frontend service
-│   ├── package.json                # React 19, Lucide, Tailwind, Next.js dependencies
-│   └── src/
-│       ├── app/
-│       │   ├── page.tsx            # Main interactive dashboard with video seek sync
-│       │   └── api/[...path]/      # Intelligent dynamic proxy for Railway & local development
-│       └── components/
-│           ├── ForensicsPanel.tsx  # Modality cards, DEADLINE_EXCEEDED alert, interactive timeline
-│           ├── OverallVerdictBanner.tsx # Dynamic headline verdict with confidence badge
-│           └── ExportDossierModal.tsx   # Markdown & JSON cryptographic export modal
+│   └── package.json                # React 19, Lucide, Next.js dependencies
 ├── pipeline/
-│   ├── ingest.py                   # yt-dlp YouTube Shorts ingestion & audio demuxing
-│   ├── claims.py                   # Groq Llama 3.3 70B claim extraction & normalization
-│   ├── search.py                   # DuckDuckGo multi-query search engine
-│   └── page_fetcher.py             # SSRF-safe page fetcher with verbatim quote offset locator
+│   ├── ingest.py                   # yt-dlp YouTube Shorts ingestion
+│   ├── claims.py                   # Groq LPU claim extraction & normalization
+│   ├── search.py                   # Multi-engine search with BM25 RAG & epistemic gating
+│   └── page_fetcher.py             # SSRF-protected page fetcher with quote locator
+├── transcription/
+│   ├── audio_prep.py               # FFmpeg loudness normalization & sample rate conversion
+│   └── groq_translator.py          # Groq Whisper translation with silent audio guard
 ├── shared/
-│   ├── schemas/
-│   │   ├── forensics.py            # Section 7 unified report schemas & verdict enums
-│   │   └── verdict.py              # Claim verification and stance schemas
-│   └── resilience.py               # Circuit breaker and retry backoff utilities
-├── tests/                          # 52+ automated unit, regression, and integration tests
+│   └── schemas/                    # Pydantic v2 domain schemas (Forensics, Verdict, Job)
+├── screenshots/                    # High-resolution screenshots showcasing the platform
+├── tests/                          # 159 automated unit, integration, and regression tests
 ├── Dockerfile                      # Production backend container (Python 3.12 + FFmpeg)
-├── railway.json                    # Production backend Railway configuration
-├── docker-compose.yml              # Local multi-service container orchestration
-├── requirements.txt                # Python backend dependencies
-└── run.bat                         # One-click Windows startup script
+├── render.yaml                     # Automated 1-Click Render Blueprint definition
+├── railway.json                    # Railway PaaS deployment configuration
+└── requirements.txt                # Python backend dependencies
 ```
 
 ---
 
-## 📄 License & Ethics
+## 📜 License & Ethical Transparency
 
-TruthLens AI is licensed under the [MIT License](LICENSE).
+TruthLens AI is open-source under the [MIT License](LICENSE).
 
-### Responsible AI & Academic Disclaimer
-Automated forensic detection, acoustic anomalies, and AI reasoning chains are engineered as **decision-support intelligence for journalists, fact-checkers, and researchers**. No automated software can guarantee 100% detection of every adversarial deepfake or subtle edit. All findings are presented with explicit confidence metrics, evidence citations, and technical boundaries.
+### Responsible AI Statement
+TruthLens AI is engineered as an **explainable decision-support intelligence platform** for journalists, intelligence analysts, and researchers. No automated system can promise 100% detection of every adversarial edit or future generative model. TruthLens AI maintains strict epistemic transparency by displaying exact confidence scores, verifiable source citations, and honest disclaimers for every verdict.
 
 <div align="center">
-  <sub>TruthLens AI Intelligence Platform — Built with rigorous engineering standards for digital media authenticity.</sub>
+  <sub>TruthLens AI — Digital Media Authenticity & Fact-Checking Intelligence Platform.</sub>
 </div>
