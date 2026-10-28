@@ -149,10 +149,16 @@ async def create_job(req: JobCreate, x_api_key: str = Header(None)):
     return job
 
 @router.get("/demo-cases")
+@router.get("/demo_cases")
 async def get_demo_cases():
     """Returns curated multimodal demonstration cases for instant zero-latency evaluation."""
     from backend.services.demo_cases import DEMO_CASES
     return DEMO_CASES
+
+
+@router.get("/{job_id}/export_markdown")
+async def export_job_dossier_markdown(job_id: str):
+    return await export_job_dossier(job_id=job_id, format="markdown")
 
 
 @router.get("/{job_id}/export")

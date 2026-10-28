@@ -60,7 +60,8 @@ def generate_markdown_dossier(
         # Unified Authenticity Engine
         unified = forensics.get("unified_authenticity", {})
         if unified:
-            md.append(f"### 🛡️ Authenticity Classification: **`{unified.get('classification')}`** ({unified.get('confidence_level')} Confidence)")
+            verdict_text = unified.get('classification') or unified.get('verdict')
+            md.append(f"### 🛡️ Authenticity Classification: **`{verdict_text}`** ({unified.get('confidence_level')} Confidence)")
             md.append(f"- **Primary Finding:** {unified.get('reason')}")
             
             # C2PA Provenance
