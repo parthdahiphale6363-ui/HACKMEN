@@ -2,6 +2,7 @@ import os
 import subprocess
 import logging
 import tempfile
+from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -40,12 +41,31 @@ def _convert_audio(input_path: str, output_path: str, bitrate: str) -> str:
     return output_path
 
 
-def prep_audio_for_groq(input_path: str, output_dir: str = None) -> str:
+def has_audio_stream(input_path: str) -> bool:
+    """Check if the media file contains at least one audio stream."""
+    if not input_path or not os.path.exists(input_path):
+        return False
+    try:
+        cmd = [
+            "ffprobe", "-v", "error",
+            "-select_streams", "a:0",
+            "-show_entries", "stream=codec_type",
+            "-of", "default=noprint_wrappers=1:nokey=1",
+            input_path,
+        ]
+        res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=True)
+        return "audio" in res.stdout.lower()
+    except Exception:
+        return True
+
+
+def prep_audio_for_groq(input_path: str, output_dir: str = None) -> Optional[str]:
     """
     Normalize and convert audio for Groq Whisper:
     - 16 kHz mono MP3
     - Loudness normalization for clearer speech
     - Progressive compression if still over 24 MB
+    Returns None if the media has no audio stream.
     """
     if not os.path.exists(input_path):
         if any(x in input_path.lower() for x in ("demo", "silent", "mock", "test")):
@@ -53,6 +73,10 @@ def prep_audio_for_groq(input_path: str, output_dir: str = None) -> str:
         raise FileNotFoundError(f"Input audio file not found: {input_path}")
 
     file_ext = os.path.splitext(input_path)[1].lower()
+    if file_ext in (".mp4", ".mov", ".mkv", ".webm", ".avi") and not has_audio_stream(input_path):
+        logger.info(f"Media file {input_path} has no audio stream.")
+        return None
+
     file_size = os.path.getsize(input_path)
 
     needs_conversion = file_ext not in GROQ_SUPPORTED_FORMATS

@@ -162,11 +162,15 @@ def fuse_forensic_evidence(
         confidence = "HIGH"
         reason = f"C2PA manifest verification failed: digital signature has been invalidated or corrupted."
 
-    # Rule B: Multimodal Full AI Generation (both visual frequency and acoustic/technical anomalies elevate together)
-    elif (vis_anomaly_level == "elevated" and (acoustic_score >= 0.35 or tech_anomaly_score >= 0.35)) or (len(spectral_anomalies) >= 2 and vis_anomaly_level == "elevated"):
+    # Rule B: Multimodal or Pure Visual AI Generation (visual frequency anomalies, diffusion grid noise, or acoustic anomalies)
+    elif (
+        (vis_anomaly_level == "elevated" and (acoustic_score >= 0.35 or tech_anomaly_score >= 0.35))
+        or (vis_anomaly_level == "elevated" and (len(spectral_anomalies) >= 2 or visual_forensics.get("visual_synthetic_score", 0.0) >= 0.65))
+        or visual_forensics.get("visual_synthetic_score", 0.0) >= 0.75
+    ):
         classification = "LIKELY_AI_GENERATED"
-        confidence = "HIGH" if (vis_anomaly_level == "elevated" and acoustic_score >= 0.50) else "MEDIUM"
-        reason = "Multimodal visual frequency abnormalities combined with acoustic anomalies indicate synthetic generation."
+        confidence = "HIGH" if (vis_anomaly_level == "elevated" or visual_forensics.get("visual_synthetic_score", 0.0) >= 0.75) else "MEDIUM"
+        reason = "Visual frequency spectrum abnormalities, convolutional grid artifacts, or keyframe compression discrepancies indicate synthetic AI video generation."
 
     # Rule C: Facial Manipulation (face boundary blur discrepancies or localized alignment jitter)
     elif len(face_anomalies) >= 1:

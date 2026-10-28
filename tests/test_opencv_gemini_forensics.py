@@ -283,6 +283,87 @@ class TestForensicsPipelineIntegration(unittest.TestCase):
         self.assertIn("Whisper vs Gemini Transcript Concordance", dossier)
         self.assertIn("Scientific Guard", dossier)
 
+    def test_silent_or_audio_free_video_pipeline(self):
+        """Verify that audio-free video with visual synthetic artifacts triggers visual deepfake detection."""
+        # Create a synthetic video with abnormal high-frequency noise
+        with tempfile.NamedTemporaryFile(suffix=".mp4", delete=False) as tf:
+            temp_vid = tf.name
+
+        try:
+            fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+            out = cv2.VideoWriter(temp_vid, fourcc, 10.0, (160, 160))
+            for i in range(15):
+                # High frequency checkerboard/noise pattern characteristic of diffusion upsampling
+                frame = np.random.randint(0, 256, (160, 160, 3), dtype=np.uint8)
+                out.write(frame)
+            out.release()
+
+            # Execute forensics pipeline with NO audio and empty transcript (pure visual media)
+            rep = run_forensics_pipeline(
+                transcript="",
+                video_url="https://example.com/silent_ai_clip.mp4",
+                audio_path=None,
+                video_path=temp_vid,
+                segments=None,
+            )
+
+            self.assertIn("opencv_visual", rep)
+            self.assertIn("visual_synthetic_score", rep["opencv_visual"])
+            self.assertGreater(rep["opencv_visual"]["visual_synthetic_score"], 0.50)
+            self.assertGreaterEqual(rep["deepfake_probability"], 0.50)
+            self.assertTrue(rep["is_synthetic"])
+            self.assertEqual(rep["forensics_veto"]["verdict"], "Deepfake")
+        finally:
+            if os.path.exists(temp_vid):
+                try:
+                    os.remove(temp_vid)
+                except Exception:
+                    pass
+
+    def test_process_video_silent_media_completes_as_done(self):
+        """Verify that a silent video with 0 claims completes as DONE with a valid visual verdict."""
+        from shared.schemas.job import Job, JobStatus
+        from backend.services.job_service import process_video, jobs_db, forensics_db
+
+        job = Job(video_url="https://example.com/silent_test_video.mp4")
+        jobs_db[str(job.id)] = job
+
+        mock_forensics = {
+            "video_integrity_score": 15.0,
+            "audio_integrity_score": 100.0,
+            "metadata_integrity_score": 80.0,
+            "deepfake_probability": 0.85,
+            "voice_clone_probability": 0.0,
+            "is_synthetic": True,
+            "opencv_visual": {"visual_synthetic_score": 0.85, "status": "assessed"},
+            "unified_authenticity": {
+                "classification": "LIKELY_AI_GENERATED",
+                "confidence_level": "HIGH",
+                "reason": "Visual frequency spectrum abnormalities indicate synthetic AI video generation."
+            }
+        }
+
+        # Mock ingest_video to simulate a silent video (0 segments, empty transcript)
+        from transcription.groq_translator import TranslationResult
+        mock_result = TranslationResult(
+            english_text="",
+            segments=[],
+            detected_source_language="None (Visual Only)",
+            audio_duration_seconds=10.0,
+            audio_path=None,
+            video_path="mock_video.mp4"
+        )
+
+        with patch("backend.services.job_service.ingest_video", return_value=mock_result), \
+             patch("backend.services.job_service.run_forensics_pipeline", return_value=mock_forensics), \
+             patch("backend.services.job_service.extract_claims_with_llm", return_value=[]):
+            process_video(job)
+
+        self.assertEqual(job.status, JobStatus.DONE)
+        self.assertEqual(job.progress_percent, 100.0)
+        self.assertEqual(job.final_verdict_category, "Deepfake")
+        self.assertIn("AI-Generated Media", job.overall_verdict)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -720,11 +720,16 @@ def run_forensics_pipeline(
     # 2. Gemini acoustic audit or technical audio shows severe synthetic manipulation (>= 0.65), OR
     # 3. Audio deepfake heuristics combined with technical flags exceed validated confidence thresholds (>= 0.75).
     visual_elevated = bool(opencv_visual.get("status") == "assessed" and opencv_visual.get("anomaly_level") == "elevated")
+    visual_synthetic_score = float(opencv_visual.get("visual_synthetic_score", 0.0) or 0.0)
     acoustic_anomaly = float(gemini_audio.get("acoustic_anomaly_analysis", {}).get("acoustic_anomaly_score", 0.0) or 0.0)
     tech_score = float(technical_audio.get("technical_anomaly_score", 0.0) or 0.0)
 
+    speech_deepfake_prob = float(deepfake.get("deepfake_probability", 0.0) or 0.0)
+    effective_deepfake_prob = round(max(speech_deepfake_prob, visual_synthetic_score), 2)
+
     is_synthetic = bool(
         (visual_elevated and (acoustic_anomaly >= 0.40 or tech_score >= 0.40))
+        or visual_synthetic_score >= 0.70
         or acoustic_anomaly >= 0.65
         or tech_score >= 0.60
         or (tech_score >= 0.45 and len(technical_audio.get("technical_flags", [])) >= 2)
@@ -735,17 +740,21 @@ def run_forensics_pipeline(
             "POTENTIALLY_SYNTHETIC_SPEECH",
         )
     )
+
+    if visual_synthetic_score >= 0.50:
+        video_integrity_score = round(max(10.0, min(video_integrity_score, 100.0 - (visual_synthetic_score * 85.0))), 1)
+
     forensics_veto = {
         "veto": is_synthetic,
         "verdict": "Deepfake" if is_synthetic else None,
-        "reason": "Multimodal visual/acoustic synthetic anomalies exceed threshold" if is_synthetic else None,
+        "reason": "Visual or multimodal synthetic anomalies exceed threshold" if is_synthetic else None,
     }
 
     return {
         "video_integrity_score": video_integrity_score,
         "audio_integrity_score": audio_integrity_score,
         "metadata_integrity_score": metadata["integrity_score"],
-        "deepfake_probability": deepfake["deepfake_probability"],
+        "deepfake_probability": effective_deepfake_prob,
         "voice_clone_probability": deepfake["voice_clone_probability"],
         "scene_consistency_score": deepfake["scene_consistency_score"],
         "is_synthetic": is_synthetic,

@@ -654,10 +654,17 @@ export default function Home() {
           {/* Meta Bar */}
           <div className="glass results-meta-bar" style={{ borderRadius: '16px', marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
             <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap' }}>
                 <h2 style={{ fontFamily: 'Outfit, sans-serif', fontSize: '1.25rem', margin: 0 }}>
-                  Analysis Complete — {realClaims.length} claim{realClaims.length !== 1 ? 's' : ''} verified
+                  {realClaims.length > 0
+                    ? `Analysis Complete — ${realClaims.length} claim${realClaims.length !== 1 ? 's' : ''} verified`
+                    : 'Visual Forensics Analysis Complete'}
                 </h2>
+                {realClaims.length === 0 && (
+                  <span style={{ fontSize: '0.68rem', fontWeight: 800, padding: '0.2rem 0.6rem', borderRadius: '6px', background: 'rgba(236, 72, 153, 0.15)', color: '#f472b6', border: '1px solid rgba(236, 72, 153, 0.35)', textTransform: 'uppercase' }}>
+                    Non-Verbal / Silent Media
+                  </span>
+                )}
                 {activeDemoCase && (
                   <span style={{ fontSize: '0.65rem', fontWeight: 800, padding: '0.15rem 0.5rem', borderRadius: '6px', background: 'rgba(99, 102, 241, 0.2)', color: '#818cf8', border: '1px solid rgba(99,102,241,0.4)', textTransform: 'uppercase' }}>
                     Demo Case
@@ -690,6 +697,30 @@ export default function Home() {
               <button className="btn-reset" onClick={reset}>↩ Analyze Another</button>
             </div>
           </div>
+
+          {/* Visual-only media banner if 0 verbal claims */}
+          {realClaims.length === 0 && (
+            <div style={{
+              background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.08), rgba(236, 72, 153, 0.08))',
+              border: '1px solid rgba(99, 102, 241, 0.25)',
+              borderRadius: '16px',
+              padding: '1.25rem 1.5rem',
+              marginBottom: '1.5rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '1rem'
+            }}>
+              <div style={{ fontSize: '1.8rem', lineHeight: 1 }}>🎬</div>
+              <div>
+                <h4 style={{ margin: '0 0 0.25rem', fontSize: '1rem', color: 'var(--text-heading)', fontWeight: 600 }}>
+                  Visual Forensics &amp; AI Generation Audit
+                </h4>
+                <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                  This video does not contain spoken dialogue or extractable verbal claims. TruthLens AI evaluated visual frame features, 2D FFT frequency spectrum anomalies, keyframe Error Level Analysis (ELA), and C2PA Content Credentials to detect AI generation.
+                </p>
+              </div>
+            </div>
+          )}
 
           {/* Overall Verdict */}
           {overallVerdict && (
@@ -741,140 +772,156 @@ export default function Home() {
                 <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>Click timestamp to seek video</span>
               </div>
               <div className="transcript-text">
-                {transcriptLines.map((line, i) => {
-                  const segSec = (() => {
-                    const p = line.time.split(':').map(Number);
-                    return p.length === 2 ? p[0] * 60 + p[1] : 0;
-                  })();
-                  const isHighlighted = seekSec != null && Math.abs(segSec - seekSec) <= 6;
-                  return (
-                    <div key={i} className={`transcript-segment${isHighlighted ? ' active-seek' : ''}`}>
-                      <span
-                        className="segment-time"
-                        onClick={() => handleSeek(segSec)}
-                        style={{ cursor: 'pointer', transition: 'color 0.15s ease' }}
-                        title="Click to seek player here"
-                      >
-                        [{line.time}]
-                      </span>
-                      {line.text}
-                    </div>
-                  );
-                })}
+                {transcriptLines.length > 0 ? (
+                  transcriptLines.map((line, i) => {
+                    const segSec = (() => {
+                      const p = line.time.split(':').map(Number);
+                      return p.length === 2 ? p[0] * 60 + p[1] : 0;
+                    })();
+                    const isHighlighted = seekSec != null && Math.abs(segSec - seekSec) <= 6;
+                    return (
+                      <div key={i} className={`transcript-segment${isHighlighted ? ' active-seek' : ''}`}>
+                        <span
+                          className="segment-time"
+                          onClick={() => handleSeek(segSec)}
+                          style={{ cursor: 'pointer', transition: 'color 0.15s ease' }}
+                          title="Click to seek player here"
+                        >
+                          [{line.time}]
+                        </span>
+                        {line.text}
+                      </div>
+                    );
+                  })
+                ) : (
+                  <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', padding: '1.25rem', fontStyle: 'italic', margin: 0, textAlign: 'center' }}>
+                    Silent media: no spoken dialogue was recorded or transcribed.
+                  </p>
+                )}
               </div>
             </div>
           </div>
 
           {/* Claim Cards */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.5rem' }}>
-            <div>
-              <p className="section-title" style={{ marginBottom: '0.2rem' }}>Claim-by-Claim Fact Check</p>
-              <p className="claims-header" style={{ marginBottom: 0 }}>
-                {realClaims.length} factual claims extracted by LLM · verified via live web search · Groq reasoning
+          {realClaims.length > 0 ? (
+            <>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                <div>
+                  <p className="section-title" style={{ marginBottom: '0.2rem' }}>Claim-by-Claim Fact Check</p>
+                  <p className="claims-header" style={{ marginBottom: 0 }}>
+                    {realClaims.length} factual claims extracted by LLM · verified via live web search · Groq reasoning
+                  </p>
+                </div>
+              </div>
+
+              {/* Filter & Search Bar */}
+              <div className="claim-controls-bar">
+                <div className="claim-search-wrap">
+                  <input
+                    type="text"
+                    className="claim-search-input"
+                    placeholder="Filter claims by keywords, sources, or entities…"
+                    value={claimSearch}
+                    onChange={e => setClaimSearch(e.target.value)}
+                  />
+                  {claimSearch && (
+                    <button className="claim-search-clear" onClick={() => setClaimSearch('')}>✕</button>
+                  )}
+                </div>
+
+                <div className="claim-filter-pills">
+                  <button
+                    type="button"
+                    className={`filter-pill${claimFilter === 'all' ? ' active' : ''}`}
+                    onClick={() => setClaimFilter('all')}
+                  >
+                    All ({realClaims.length})
+                  </button>
+                  {realClaims.filter(c => c.verdict?.label === 'true').length > 0 && (
+                    <button
+                      type="button"
+                      className={`filter-pill${claimFilter === 'true' ? ' active' : ''}`}
+                      onClick={() => setClaimFilter('true')}
+                      style={claimFilter === 'true' ? { background: 'rgba(16,185,129,0.25)', borderColor: '#10b981', color: '#10b981' } : {}}
+                    >
+                      ✓ True ({realClaims.filter(c => c.verdict?.label === 'true').length})
+                    </button>
+                  )}
+                  {realClaims.filter(c => c.verdict?.label === 'false').length > 0 && (
+                    <button
+                      type="button"
+                      className={`filter-pill${claimFilter === 'false' ? ' active' : ''}`}
+                      onClick={() => setClaimFilter('false')}
+                      style={claimFilter === 'false' ? { background: 'rgba(239,68,68,0.25)', borderColor: '#ef4444', color: '#ef4444' } : {}}
+                    >
+                      ✗ False ({realClaims.filter(c => c.verdict?.label === 'false').length})
+                    </button>
+                  )}
+                  {realClaims.filter(c => c.verdict?.label === 'misleading').length > 0 && (
+                    <button
+                      type="button"
+                      className={`filter-pill${claimFilter === 'misleading' ? ' active' : ''}`}
+                      onClick={() => setClaimFilter('misleading')}
+                      style={claimFilter === 'misleading' ? { background: 'rgba(245,158,11,0.25)', borderColor: '#f59e0b', color: '#f59e0b' } : {}}
+                    >
+                      ⚠ Misleading ({realClaims.filter(c => c.verdict?.label === 'misleading').length})
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {(() => {
+                const filtered = realClaims.filter(item => {
+                  const itemLabel = item.verdict?.label;
+                  if (claimFilter !== 'all' && itemLabel !== claimFilter) return false;
+                  if (claimSearch.trim()) {
+                    const q = claimSearch.toLowerCase();
+                    const textMatch = item.claim?.normalized_text?.toLowerCase().includes(q) ||
+                                      item.claim?.raw_text?.toLowerCase().includes(q);
+                    const reasoningMatch = item.verdict?.reasoning?.toLowerCase().includes(q) ||
+                                           item.verdict?.summary?.toLowerCase().includes(q);
+                    const sourceMatch = item.verdict?.evidence?.some(e =>
+                      e.source_title?.toLowerCase().includes(q) || e.domain?.toLowerCase().includes(q)
+                    );
+                    return Boolean(textMatch || reasoningMatch || sourceMatch);
+                  }
+                  return true;
+                });
+
+                if (filtered.length === 0) {
+                  return (
+                    <div style={{ padding: '2.5rem', textAlign: 'center', background: 'rgba(255,255,255,0.02)', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.08)', marginBottom: '1.5rem' }}>
+                      <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '0.75rem' }}>No claims matched your search query or filter.</p>
+                      <button
+                        type="button"
+                        onClick={() => { setClaimFilter('all'); setClaimSearch(''); }}
+                        style={{ background: 'rgba(99,102,241,0.15)', border: '1px solid #6366f1', color: '#818cf8', borderRadius: '8px', padding: '0.4rem 1rem', fontSize: '0.78rem', cursor: 'pointer', fontWeight: 700 }}
+                      >
+                        Clear Filter
+                      </button>
+                    </div>
+                  );
+                }
+
+                return filtered.map((item, i) => (
+                  <ClaimCard
+                    key={(item.claim as any).id || i}
+                    item={item}
+                    index={i}
+                    onSeek={handleSeek}
+                  />
+                ));
+              })()}
+            </>
+          ) : (
+            <div className="glass" style={{ borderRadius: '16px', padding: '2rem', textAlign: 'center', marginBottom: '2rem' }}>
+              <p className="section-title" style={{ marginBottom: '0.4rem' }}>Claim-by-Claim Fact Check</p>
+              <p style={{ color: 'var(--text-secondary)', margin: 0, fontSize: '0.92rem' }}>
+                No spoken claims were present in this media. Full verification was conducted through visual stream keyframes, 2D FFT spectral profiling, and C2PA Content Credentials in the Forensic Authenticity Hub above.
               </p>
-            </div>
-          </div>
-
-          {/* Filter & Search Bar */}
-          {realClaims.length > 0 && (
-            <div className="claim-controls-bar">
-              <div className="claim-search-wrap">
-                <input
-                  type="text"
-                  className="claim-search-input"
-                  placeholder="Filter claims by keywords, sources, or entities…"
-                  value={claimSearch}
-                  onChange={e => setClaimSearch(e.target.value)}
-                />
-                {claimSearch && (
-                  <button className="claim-search-clear" onClick={() => setClaimSearch('')}>✕</button>
-                )}
-              </div>
-
-              <div className="claim-filter-pills">
-                <button
-                  type="button"
-                  className={`filter-pill${claimFilter === 'all' ? ' active' : ''}`}
-                  onClick={() => setClaimFilter('all')}
-                >
-                  All ({realClaims.length})
-                </button>
-                {realClaims.filter(c => c.verdict?.label === 'true').length > 0 && (
-                  <button
-                    type="button"
-                    className={`filter-pill${claimFilter === 'true' ? ' active' : ''}`}
-                    onClick={() => setClaimFilter('true')}
-                    style={claimFilter === 'true' ? { background: 'rgba(16,185,129,0.25)', borderColor: '#10b981', color: '#10b981' } : {}}
-                  >
-                    ✓ True ({realClaims.filter(c => c.verdict?.label === 'true').length})
-                  </button>
-                )}
-                {realClaims.filter(c => c.verdict?.label === 'false').length > 0 && (
-                  <button
-                    type="button"
-                    className={`filter-pill${claimFilter === 'false' ? ' active' : ''}`}
-                    onClick={() => setClaimFilter('false')}
-                    style={claimFilter === 'false' ? { background: 'rgba(239,68,68,0.25)', borderColor: '#ef4444', color: '#ef4444' } : {}}
-                  >
-                    ✗ False ({realClaims.filter(c => c.verdict?.label === 'false').length})
-                  </button>
-                )}
-                {realClaims.filter(c => c.verdict?.label === 'misleading').length > 0 && (
-                  <button
-                    type="button"
-                    className={`filter-pill${claimFilter === 'misleading' ? ' active' : ''}`}
-                    onClick={() => setClaimFilter('misleading')}
-                    style={claimFilter === 'misleading' ? { background: 'rgba(245,158,11,0.25)', borderColor: '#f59e0b', color: '#f59e0b' } : {}}
-                  >
-                    ⚠ Misleading ({realClaims.filter(c => c.verdict?.label === 'misleading').length})
-                  </button>
-                )}
-              </div>
             </div>
           )}
 
-          {(() => {
-            const filtered = realClaims.filter(item => {
-              const itemLabel = item.verdict?.label;
-              if (claimFilter !== 'all' && itemLabel !== claimFilter) return false;
-              if (claimSearch.trim()) {
-                const q = claimSearch.toLowerCase();
-                const textMatch = item.claim?.normalized_text?.toLowerCase().includes(q) ||
-                                  item.claim?.raw_text?.toLowerCase().includes(q);
-                const reasoningMatch = item.verdict?.reasoning?.toLowerCase().includes(q) ||
-                                       item.verdict?.summary?.toLowerCase().includes(q);
-                const sourceMatch = item.verdict?.evidence?.some(e =>
-                  e.source_title?.toLowerCase().includes(q) || e.domain?.toLowerCase().includes(q)
-                );
-                return Boolean(textMatch || reasoningMatch || sourceMatch);
-              }
-              return true;
-            });
-
-            if (filtered.length === 0) {
-              return (
-                <div style={{ padding: '2.5rem', textAlign: 'center', background: 'rgba(255,255,255,0.02)', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.08)', marginBottom: '1.5rem' }}>
-                  <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '0.75rem' }}>No claims matched your search query or filter.</p>
-                  <button
-                    type="button"
-                    onClick={() => { setClaimFilter('all'); setClaimSearch(''); }}
-                    style={{ background: 'rgba(99,102,241,0.15)', border: '1px solid #6366f1', color: '#818cf8', borderRadius: '8px', padding: '0.4rem 1rem', fontSize: '0.78rem', cursor: 'pointer', fontWeight: 700 }}
-                  >
-                    Clear Filter
-                  </button>
-                </div>
-              );
-            }
-
-            return filtered.map((item, i) => (
-              <ClaimCard
-                key={(item.claim as any).id || i}
-                item={item}
-                index={i}
-                onSeek={handleSeek}
-              />
-            ));
-          })()}
         </div>
       )}
 

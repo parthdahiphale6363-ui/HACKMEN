@@ -73,6 +73,18 @@ def ingest_video(
         logger.info(f"Job {job.id} - Preparing audio")
         prepped_audio_path = prep_audio_for_groq(extraction.audio_path)
 
+        if not prepped_audio_path:
+            logger.info(f"Job {job.id} - No audio stream detected. Proceeding in Visual Forensics mode.")
+            _update_job(job, JobStatus.TRANSCRIBING, PROGRESS[JobStatus.TRANSCRIBING])
+            return TranslationResult(
+                english_text="",
+                segments=[],
+                detected_source_language="None (Visual Only)",
+                audio_duration_seconds=extraction.duration_seconds or 0.0,
+                audio_path=None,
+                video_path=extraction.video_path,
+            )
+
         _update_job(job, JobStatus.TRANSCRIBING, 25.0)
         logger.info(f"Job {job.id} - Translating audio using Groq Whisper")
 
@@ -95,11 +107,33 @@ def ingest_video(
         return translation_result
 
     except SilentAudioError as e:
+        if extraction and extraction.video_path and os.path.isfile(extraction.video_path):
+            logger.info(f"Job {job.id} - No speech detected in audio. Proceeding in Visual Forensics mode.")
+            _update_job(job, JobStatus.TRANSCRIBING, PROGRESS[JobStatus.TRANSCRIBING])
+            return TranslationResult(
+                english_text="",
+                segments=[],
+                detected_source_language="None (Silent Audio)",
+                audio_duration_seconds=extraction.duration_seconds or 0.0,
+                audio_path=extraction.audio_path,
+                video_path=extraction.video_path,
+            )
         _update_job(job, JobStatus.FAILED, job.progress_percent, f"No speech detected: {e}")
         logger.warning(job.error_message)
         return None
 
     except AudioPrepError as e:
+        if extraction and extraction.video_path and os.path.isfile(extraction.video_path):
+            logger.info(f"Job {job.id} - Audio stream missing or non-decodable. Proceeding in Visual Forensics mode.")
+            _update_job(job, JobStatus.TRANSCRIBING, PROGRESS[JobStatus.TRANSCRIBING])
+            return TranslationResult(
+                english_text="",
+                segments=[],
+                detected_source_language="None (Visual Only)",
+                audio_duration_seconds=extraction.duration_seconds or 0.0,
+                audio_path=None,
+                video_path=extraction.video_path,
+            )
         _update_job(job, JobStatus.FAILED, job.progress_percent, f"Audio preparation failed: {e}")
         logger.error(job.error_message)
         return None

@@ -67,6 +67,7 @@ class OpenCVVisualForensics(BaseModel):
     face_boundary_analysis: FaceBoundaryAnalysis = Field(default_factory=FaceBoundaryAnalysis)
     error_level_analysis: ErrorLevelAnalysisData = Field(default_factory=ErrorLevelAnalysisData)
     anomaly_level: str = Field(default="low", description="low | moderate | elevated")
+    visual_synthetic_score: float = Field(default=0.0, description="Estimated visual synthetic AI generation probability (0 to 1)")
     observed_anomalies: List[str] = Field(default_factory=list, description="Consolidated visual anomaly signals")
     suspicious_segments: List[Dict[str, Any]] = Field(default_factory=list, description="Timestamped suspicious visual intervals")
     limitations: str = Field(

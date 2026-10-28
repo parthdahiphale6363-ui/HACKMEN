@@ -396,10 +396,27 @@ def analyze_video_visual(video_path: Optional[str]) -> Dict[str, Any]:
     anomaly_count = len(observed_anomalies)
     if anomaly_count == 0:
         anomaly_level = "low"
+        visual_synthetic_score = 0.05
     elif anomaly_count <= 2:
         anomaly_level = "moderate"
+        visual_synthetic_score = 0.35
     else:
         anomaly_level = "elevated"
+        visual_synthetic_score = 0.70
+
+    # Specific strong AI generation markers:
+    # 1. 2D FFT High frequency suppression (excessive neural smoothing) or elevated energy (diffusion grid noise)
+    if mean_hf > 0.52 or (mean_hf < 0.010 and frames_analyzed >= 3):
+        visual_synthetic_score = max(visual_synthetic_score, 0.75)
+    # 2. Quadrant asymmetry/regularity spikes
+    if mean_reg < 0.35:
+        visual_synthetic_score = max(visual_synthetic_score, 0.65)
+    # 3. Facial boundary blur mismatch
+    if face_data.mean_boundary_blur_ratio and face_data.mean_boundary_blur_ratio > 1.85:
+        visual_synthetic_score = max(visual_synthetic_score, 0.80)
+    # 4. ELA compression variance
+    if ela_data.variance and ela_data.variance > 18.0:
+        visual_synthetic_score = max(visual_synthetic_score, 0.60)
 
     schema = OpenCVVisualForensics(
         status="assessed",
@@ -412,6 +429,7 @@ def analyze_video_visual(video_path: Optional[str]) -> Dict[str, Any]:
         face_boundary_analysis=face_data,
         error_level_analysis=ela_data,
         anomaly_level=anomaly_level,
+        visual_synthetic_score=round(float(visual_synthetic_score), 2),
         observed_anomalies=observed_anomalies[:6],
         suspicious_segments=suspicious_segments,
         limitations="Visual forensic indicators measure statistical, boundary, and frequency properties. They indicate anomalies for analyst review and do not constitute deterministic proof of synthetic media generation.",
