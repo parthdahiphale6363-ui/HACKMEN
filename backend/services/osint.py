@@ -237,19 +237,38 @@ def verify_via_google_factcheck(claims: List[str]) -> Dict[str, Any]:
 
 # ─── 7. Source Authority Check (Wayback & WHOIS) ─────────────────────────────
 
+_WAYBACK_CACHE: Dict[str, bool] = {}
+_WAYBACK_BLOCKED_UNTIL: float = 0.0
+
+
 def _check_wayback_machine(url: str) -> bool:
-    """Check if URL exists in Wayback Machine (Internet Archive)."""
+    """Check if URL exists in Wayback Machine (Internet Archive) with circuit breaker."""
+    global _WAYBACK_BLOCKED_UNTIL
     if not url:
         return False
+    if url in _WAYBACK_CACHE:
+        return _WAYBACK_CACHE[url]
+
+    import time
+    if time.time() < _WAYBACK_BLOCKED_UNTIL:
+        return False
+
     try:
         api_url = f"https://archive.org/wayback/available?url={urllib.parse.quote(url)}"
         req = urllib.request.Request(api_url, headers={"User-Agent": "FactChecker/1.0"})
-        with urllib.request.urlopen(req, timeout=5) as resp:
+        with urllib.request.urlopen(req, timeout=2.5) as resp:
             data = json.loads(resp.read().decode("utf-8"))
             snapshots = data.get("archived_snapshots", {})
-            return "closest" in snapshots
+            has_snapshot = "closest" in snapshots
+            _WAYBACK_CACHE[url] = has_snapshot
+            return has_snapshot
     except Exception as e:
-        print(f"[osint] Wayback fetch error for {url}: {e}")
+        err_msg = str(e)
+        if "429" in err_msg or "too many requests" in err_msg.lower():
+            # Rate limited: trip circuit breaker for 60 seconds to avoid blocking other pipeline tasks
+            _WAYBACK_BLOCKED_UNTIL = time.time() + 60.0
+        print(f"[osint] Wayback fetch error for {url}: {err_msg}")
+    _WAYBACK_CACHE[url] = False
     return False
 
 def _check_domain_age(domain: str) -> str:

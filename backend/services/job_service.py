@@ -1193,8 +1193,8 @@ def process_video(job: Job):
             }
             return (idx, res, verdict_label)
 
-        # Run claim verification with bounded worker pool (max_workers=3)
-        max_claim_workers = min(len(extracted), 3)
+        # Run claim verification with bounded worker pool (max_workers=5 for full parallel execution)
+        max_claim_workers = min(len(extracted), 5)
         verified_results = [None] * len(extracted)
 
         with ThreadPoolExecutor(max_workers=max_claim_workers) as claim_pool:

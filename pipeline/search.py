@@ -500,20 +500,20 @@ def _fetch_web_evidence(queries: List[str], claim_text: str = "") -> Tuple[List[
         evidence.append(item)
         return True
 
-    # Step A: NewsAPI — primary news source concurrently
-    news_queries = queries[:3]
+    # Step A: NewsAPI — primary news source concurrently (top 2 queries)
+    news_queries = queries[:2]
     news_api_failed = False
     if news_queries:
-        with ThreadPoolExecutor(max_workers=min(len(news_queries), 3)) as executor:
+        with ThreadPoolExecutor(max_workers=min(len(news_queries), 2)) as executor:
             futures = [
-                executor.submit(search_newsapi, q, 8, claim_text or q)
+                executor.submit(search_newsapi, q, 6, claim_text or q)
                 for q in news_queries
             ]
             for query, fut in zip(news_queries, futures):
-                if len(evidence) >= 12:
+                if len(evidence) >= 10:
                     break
                 try:
-                    articles = fut.result(timeout=10)
+                    articles = fut.result(timeout=5)
                 except Exception as e:
                     print(f"[search] News search failed for '{query[:30]}': {e}")
                     articles = []
@@ -542,19 +542,19 @@ def _fetch_web_evidence(queries: List[str], claim_text: str = "") -> Tuple[List[
                     ))
 
     # Step A2: DuckDuckGo news if API news returned nothing
-    if not news_raw:
+    if not news_raw and len(evidence) < 6:
         ddg_news_queries = queries[:2]
         if ddg_news_queries:
             with ThreadPoolExecutor(max_workers=min(len(ddg_news_queries), 2)) as executor:
                 futures = [
-                    executor.submit(_ddgs_news_search, f"{q} news", 6)
+                    executor.submit(_ddgs_news_search, f"{q} news", 5)
                     for q in ddg_news_queries
                 ]
                 for query, fut in zip(ddg_news_queries, futures):
-                    if len(evidence) >= 10:
+                    if len(evidence) >= 8:
                         break
                     try:
-                        ddg_news = fut.result(timeout=8)
+                        ddg_news = fut.result(timeout=4)
                     except Exception as e:
                         ddg_news = []
                     search_runs.append({
@@ -576,19 +576,19 @@ def _fetch_web_evidence(queries: List[str], claim_text: str = "") -> Tuple[List[
         if news_api_failed and not news_raw:
             print("[search] News API key invalid or unavailable — using DuckDuckGo news + web search.")
 
-    # Step C: Always run DuckDuckGo web search concurrently across queries
-    web_queries = queries[:5]
+    # Step C: Always run DuckDuckGo web search concurrently across queries (top 3 queries)
+    web_queries = queries[:3]
     if web_queries:
-        with ThreadPoolExecutor(max_workers=min(len(web_queries), 5)) as executor:
+        with ThreadPoolExecutor(max_workers=min(len(web_queries), 3)) as executor:
             futures = [
-                executor.submit(_ddgs_search, q, 8)
+                executor.submit(_ddgs_search, q, 6)
                 for q in web_queries
             ]
             for query, fut in zip(web_queries, futures):
-                if len(evidence) >= 16:
+                if len(evidence) >= 12:
                     break
                 try:
-                    results = fut.result(timeout=10)
+                    results = fut.result(timeout=5)
                 except Exception as e:
                     print(f"[search] DDGS search failed for '{query[:30]}': {e}")
                     results = []
@@ -1026,17 +1026,19 @@ def gather_evidence_for_claim(claim_text: str, transcript_text: str = "") -> Dic
     valid_count = sum(
         1 for item in classified_items
         if item.stance in (EvidenceStance.SUPPORTS, EvidenceStance.CONTRADICTS, EvidenceStance.MIXED)
-        and item.relevance_score >= 0.40
+        and item.relevance_score >= 0.35
     )
 
-    # Round 2: Expand queries if evidence is sparse or off-topic
-    if valid_count < 2:
+    # Round 2: Only expand queries if evidence is genuinely absent or sparse (< 2 relevant items and < 3 total documents)
+    has_sufficient_evidence = valid_count >= 2 or (valid_count >= 1 and len(web_evidence) >= 3)
+    if not has_sufficient_evidence:
         print(f"[search] Evidence sparse or off-topic ({valid_count} relevant items). Initiating Round 2 search expansion...")
         retrieval_rounds = 2
         round2_queries = expand_search_queries(english_claim, executed_queries)
         if round2_queries:
-            executed_queries.extend(round2_queries)
-            round2_raw, runs2 = _fetch_web_evidence(round2_queries, claim_text=english_claim)
+            fast_r2_queries = round2_queries[:2]
+            executed_queries.extend(fast_r2_queries)
+            round2_raw, runs2 = _fetch_web_evidence(fast_r2_queries, claim_text=english_claim)
             search_runs_trace.extend(runs2)
             round2_rag = run_rag_pipeline(english_claim, round2_raw)
             # Merge Round 1 and Round 2

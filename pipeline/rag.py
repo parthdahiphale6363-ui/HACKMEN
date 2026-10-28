@@ -202,12 +202,25 @@ def _build_wikipedia_query(claim: str) -> str:
     return " ".join(deduped[:4]).strip()
 
 
+_WIKI_CACHE: Dict[str, Tuple[List[Dict[str, Any]], float]] = {}
+_FACTCHECK_CACHE: Dict[str, Tuple[List[Dict[str, Any]], float]] = {}
+
+
 def _fetch_wikipedia(query: str, claim: str, max_results: int = 3) -> List[Dict[str, Any]]:
     """
     Search Wikipedia and fetch a full text extract for each result.
     The `claim` parameter is used to filter out irrelevant pages via Jaccard.
     Returns real wikipedia.org URLs with meaningful, on-topic content.
+    Includes in-memory caching for zero-latency retrieval on related claims.
     """
+    import time
+    cache_key = f"{query.strip().lower()}:{claim.strip().lower()[:60]}"
+    now = time.time()
+    if cache_key in _WIKI_CACHE:
+        cached_res, exp = _WIKI_CACHE[cache_key]
+        if now < exp:
+            return [dict(r) for r in cached_res]
+
     results = []
     try:
         # Step 1: Search for pages using the targeted subject query
@@ -222,7 +235,7 @@ def _fetch_wikipedia(query: str, claim: str, max_results: int = 3) -> List[Dict[
                 "srlimit": max_results + 2,  # Fetch extra so we can filter irrelevant
             })
         )
-        data, success = resilient_http_fetch("wikipedia", search_url, headers={"User-Agent": "FactCheckerBot/2.0"}, timeout=10)
+        data, success = resilient_http_fetch("wikipedia", search_url, headers={"User-Agent": "FactCheckerBot/2.0"}, timeout=6)
         if not success or not data:
             return []
 
@@ -284,7 +297,9 @@ def _fetch_wikipedia(query: str, claim: str, max_results: int = 3) -> List[Dict[
     except Exception as e:
         print(f"[rag] Wikipedia fetch error: {e}")
 
-    return results[:max_results]
+    final_res = results[:max_results]
+    _WIKI_CACHE[cache_key] = (final_res, now + 3600.0)
+    return final_res
 
 
 # ─── 5. Google Fact Check Tools ───────────────────────────────────────────────
@@ -295,6 +310,14 @@ def _fetch_google_factcheck(query: str, claim: str = "") -> List[Dict[str, Any]]
     gfc_key = manager.get_google_factcheck_key()
     if not gfc_key:
         return []
+
+    import time
+    cache_key = f"{query.strip().lower()}:{claim.strip().lower()[:60]}"
+    now = time.time()
+    if cache_key in _FACTCHECK_CACHE:
+        cached_res, exp = _FACTCHECK_CACHE[cache_key]
+        if now < exp:
+            return [dict(r) for r in cached_res]
 
     target_claim = claim or query
     # Build a concise, unquoted query
@@ -307,7 +330,7 @@ def _fetch_google_factcheck(query: str, claim: str = "") -> List[Dict[str, Any]]
             "https://factchecktools.googleapis.com/v1alpha1/claims:search?"
             + urllib.parse.urlencode(params)
         )
-        data, success = resilient_http_fetch("google_factcheck", url, headers={"User-Agent": "FactCheckerBot/2.0"}, timeout=8)
+        data, success = resilient_http_fetch("google_factcheck", url, headers={"User-Agent": "FactCheckerBot/2.0"}, timeout=5)
         return data if success else None
 
     try:
@@ -318,6 +341,7 @@ def _fetch_google_factcheck(query: str, claim: str = "") -> List[Dict[str, Any]]
                 data = _do_query(" ".join(parts[:2]))
 
         if not data:
+            _FACTCHECK_CACHE[cache_key] = ([], now + 3600.0)
             return []
 
         for c in data.get("claims", [])[:3]:
@@ -343,6 +367,7 @@ def _fetch_google_factcheck(query: str, claim: str = "") -> List[Dict[str, Any]]
     except Exception as e:
         print(f"[rag] Google Fact Check fetch error: {e}")
 
+    _FACTCHECK_CACHE[cache_key] = (results, now + 3600.0)
     return results
 
 
@@ -376,12 +401,12 @@ def run_rag_pipeline(
         wiki_future = executor.submit(_fetch_wikipedia, wiki_query, claim, max_results=3)
         fc_future = executor.submit(_fetch_google_factcheck, wiki_query, claim=claim)
         try:
-            wiki_results = wiki_future.result(timeout=15)
+            wiki_results = wiki_future.result(timeout=7)
         except Exception as e:
             print(f"[rag] Wikipedia fetch thread failed: {e}")
             wiki_results = []
         try:
-            fc_results = fc_future.result(timeout=15)
+            fc_results = fc_future.result(timeout=7)
         except Exception as e:
             print(f"[rag] Google Fact Check thread failed: {e}")
             fc_results = []
