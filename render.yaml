@@ -1,0 +1,41 @@
+services:
+  # ── TruthLens AI Backend (FastAPI + Forensics + Audio Analysis) ──
+  - type: web
+    name: truthlens-backend
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHONUNBUFFERED
+        value: "1"
+      - key: GROQ_API_KEY
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: TAVILY_API_KEY
+        sync: false
+      - key: NEWS_API_KEY
+        sync: false
+      - key: NEWSDATA_API_KEY
+        sync: false
+      - key: GOOGLE_FACTCHECK_API_KEY
+        sync: false
+
+  # ── TruthLens AI Frontend (Next.js Cyber Forensics UI) ──
+  - type: web
+    name: truthlens-frontend
+    runtime: docker
+    dockerfilePath: ./frontend/Dockerfile
+    dockerContext: ./frontend
+    plan: free
+    healthCheckPath: /
+    envVars:
+      - key: NODE_ENV
+        value: "production"
+      - key: BACKEND_URL
+        fromService:
+          type: web
+          name: truthlens-backend
+          property: host

@@ -8,9 +8,18 @@ function getCandidateBases(): string[] {
     process.env.NEXT_PUBLIC_BACKEND_URL,
   ]
     .filter((u): u is string => Boolean(u && u.trim()))
-    .map(u => u.trim().replace(/\/$/, ''));
+    .map(u => {
+      let trimmed = u.trim().replace(/\/$/, '');
+      if (!trimmed.startsWith('http://') && !trimmed.startsWith('https://')) {
+        trimmed = `https://${trimmed}`;
+      }
+      return trimmed;
+    });
 
-  const railwayInternalUrls = [
+  const cloudInternalUrls = [
+    'http://truthlens-backend:10000',
+    'http://truthlens-backend:8000',
+    'http://truthlens-backend',
     'http://multimodal-video-forensics-fact.railway.internal:8080',
     'http://multimodal-video-forensics-fact.railway.internal:8000',
     'http://multimodal-video-forensics-fact:8080',
@@ -24,8 +33,8 @@ function getCandidateBases(): string[] {
   ];
 
   const order = _cachedWorkingBase
-    ? [_cachedWorkingBase, ...envUrls, ...railwayInternalUrls, ...localUrls]
-    : [...envUrls, ...railwayInternalUrls, ...localUrls];
+    ? [_cachedWorkingBase, ...envUrls, ...cloudInternalUrls, ...localUrls]
+    : [...envUrls, ...cloudInternalUrls, ...localUrls];
 
   return Array.from(new Set(order));
 }
