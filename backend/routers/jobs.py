@@ -1,17 +1,10 @@
 from fastapi import APIRouter, HTTPException, Header
 from pydantic import BaseModel
-try:
-    from backend.services.job_service import (
-        jobs_db, claims_verdicts_db, transcripts_db,
-        forensics_db, osint_db, dm_db, process_video,
-        job_dispatcher, enqueue_job
-    )
-except ModuleNotFoundError:  # pragma: no cover - support running from backend/
-    from services.job_service import (
-        jobs_db, claims_verdicts_db, transcripts_db,
-        forensics_db, osint_db, dm_db, process_video,
-        job_dispatcher, enqueue_job
-    )
+from backend.services.job_service import (
+    jobs_db, claims_verdicts_db, transcripts_db,
+    forensics_db, osint_db, dm_db, process_video,
+    job_dispatcher, enqueue_job
+)
 from shared.schemas.job import Job, JobStatus
 from fastapi.responses import StreamingResponse
 import asyncio
@@ -97,10 +90,7 @@ def check_rate_limit(api_key: str) -> bool:
     rate_limit_db[api_key].append(now)
     return True
 
-try:
-    from backend.services.security_validation import validate_media_url, validate_media_file
-except ImportError:
-    from services.security_validation import validate_media_url, validate_media_file
+from backend.services.security_validation import validate_media_url, validate_media_file
 
 class JobCreate(BaseModel):
     video_url: str

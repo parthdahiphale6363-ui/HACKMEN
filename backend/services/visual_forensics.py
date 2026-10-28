@@ -11,9 +11,24 @@ All outputs represent anomaly indicators rather than deterministic proof of mani
 """
 
 import os
-import cv2
 import numpy as np
 from typing import Dict, Any, List, Optional, Tuple
+
+try:
+    import cv2
+except ImportError:
+    cv2 = None
+
+
+def _require_cv2(feature_name: str = "visual forensics"):
+    """Validates cv2 availability and raises an actionable error if missing."""
+    if cv2 is None:
+        raise RuntimeError(
+            f"OpenCV (cv2) is required for {feature_name} but is not installed. "
+            "Please install 'opencv-python-headless' (e.g., pip install opencv-python-headless)."
+        )
+    return cv2
+
 
 from shared.schemas.forensics import (
     OpenCVVisualForensics,
@@ -83,6 +98,7 @@ def _compute_ela_metrics(frame: np.ndarray, quality: int = 90) -> Tuple[float, f
     Compresses frame to JPEG at specified quality, differences against original,
     and returns (mean_error, max_error, variance).
     """
+    _require_cv2("Error Level Analysis (ELA)")
     success, encoded = cv2.imencode(".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, quality])
     if not success:
         return 0.0, 0.0, 0.0
@@ -110,6 +126,7 @@ def analyze_video_visual(video_path: Optional[str]) -> Dict[str, Any]:
         )
         return schema.model_dump()
 
+    _require_cv2("video visual frame analysis")
     cap = cv2.VideoCapture(video_path)
     if not cap.isOpened():
         schema = OpenCVVisualForensics(

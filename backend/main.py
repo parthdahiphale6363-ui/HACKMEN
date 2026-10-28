@@ -39,11 +39,7 @@ if sys.platform == "win32":
     sys.stderr.reconfigure(encoding="utf-8", errors="replace")
 
 
-try:
-    from backend.routers.jobs import router as jobs_router
-
-except ModuleNotFoundError:  # pragma: no cover - support running main.py directly from backend/
-    from routers.jobs import router as jobs_router
+from backend.routers.jobs import router as jobs_router
 
 from contextlib import asynccontextmanager
 

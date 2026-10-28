@@ -11,14 +11,9 @@ from shared.schemas.job import Job, JobStatus
 from shared.schemas.claim import Claim, SourcePlatform
 from pipeline.ingest import ingest_video
 from pipeline.search import gather_evidence_for_claim
-try:
-    from backend.services.forensics import run_forensics_pipeline
-    from backend.services.osint import run_osint_pipeline
-    from backend.services.data_mining import run_data_mining_pipeline
-except ModuleNotFoundError:  # pragma: no cover - support running from backend/
-    from services.forensics import run_forensics_pipeline
-    from services.osint import run_osint_pipeline
-    from services.data_mining import run_data_mining_pipeline
+from backend.services.forensics import run_forensics_pipeline
+from backend.services.osint import run_osint_pipeline
+from backend.services.data_mining import run_data_mining_pipeline
 
 try:
     from backend.storage.repository import (

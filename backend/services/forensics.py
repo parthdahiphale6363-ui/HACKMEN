@@ -20,18 +20,20 @@ from typing import Any, Dict, List, Optional
 
 from shared.llm import get_llm_client, get_llm_model, call_llm_with_fallback
 
-try:
-    from backend.services.visual_forensics import analyze_video_visual
-    from backend.services.gemini_audio import analyze_audio_with_gemini
-    from backend.services.provenance import analyze_media_provenance
-    from backend.services.audio_authenticity import audit_audio_authenticity
-    from backend.services.evidence_fusion import fuse_forensic_evidence
-except ImportError:
-    from services.visual_forensics import analyze_video_visual
-    from services.gemini_audio import analyze_audio_with_gemini
-    from services.provenance import analyze_media_provenance
-    from services.audio_authenticity import audit_audio_authenticity
-    from services.evidence_fusion import fuse_forensic_evidence
+from backend.services.gemini_audio import analyze_audio_with_gemini
+from backend.services.provenance import analyze_media_provenance
+from backend.services.audio_authenticity import audit_audio_authenticity
+from backend.services.evidence_fusion import fuse_forensic_evidence
+
+
+def analyze_video_visual(video_path: Optional[str]) -> Dict[str, Any]:
+    """
+    Lazy wrapper for OpenCV visual stream analysis.
+    Ensures video-processing dependencies are only initialized when visual analysis is requested,
+    allowing heuristic and speech forensic modules to load cleanly in test/isolated environments.
+    """
+    from backend.services.visual_forensics import analyze_video_visual as _analyze
+    return _analyze(video_path)
 
 
 # ─── FFprobe & FFmpeg Helpers ────────────────────────────────────────────────

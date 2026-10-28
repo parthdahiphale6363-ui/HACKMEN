@@ -14,6 +14,7 @@ Measures:
 import os
 import sys
 import unittest
+import unittest.mock
 from typing import Dict, List, Any
 
 ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -242,6 +243,79 @@ class TestForensicsValidation(unittest.TestCase):
         self.assertGreaterEqual(tpr, 0.75, "Forensics should detect at least 75% of synthetic profiles")
         self.assertLessEqual(fpr, 0.10, "Forensics false positive rate on organic media must be <= 10%")
         self.assertEqual(fp, 0, "Organic media should not trigger synthetic media veto")
+
+
+class TestForensicIsolationAndDependencyRobustness(unittest.TestCase):
+    """
+    Regression tests verifying:
+      - Heuristics run in pure isolation without video processing.
+      - Actionable error messages when OpenCV is missing on video operations.
+      - Graceful handling of audio-only inputs without OpenCV.
+      - Pure NumPy FFT operations work independently of OpenCV.
+    """
+
+    def test_heuristic_isolation(self):
+        """Analyze heuristics operates cleanly on transcripts and technical audio."""
+        res = analyze_deepfake_heuristics(
+            transcript="Breaking news, standard journalistic report on economic inflation.",
+            video_url="https://youtube.com/watch?v=example",
+            technical_audio={"technical_flags": [], "technical_anomaly_score": 0.0}
+        )
+        self.assertIn("deepfake_probability", res)
+        self.assertIn("is_synthetic", res)
+        self.assertFalse(res["is_synthetic"])
+
+    def test_video_forensics_audio_only_graceful(self):
+        """analyze_video_visual(None) should return status='not_assessed' gracefully."""
+        from backend.services.forensics import analyze_video_visual
+        res = analyze_video_visual(None)
+        self.assertEqual(res["status"], "not_assessed")
+        self.assertIn("No local video file available", res["limitations"])
+
+    def test_video_forensics_actionable_error_when_cv2_missing(self):
+        """When cv2 is missing and real video analysis is attempted, raise clear actionable RuntimeError."""
+        import backend.services.visual_forensics as vf
+        original_cv2 = vf.cv2
+        try:
+            vf.cv2 = None
+            # Patch os.path.isfile to simulate a video file path
+            with unittest.mock.patch("os.path.isfile", return_value=True):
+                with self.assertRaises(RuntimeError) as ctx:
+                    vf.analyze_video_visual("dummy_video.mp4")
+                self.assertIn("OpenCV (cv2) is required", str(ctx.exception))
+                self.assertIn("opencv-python-headless", str(ctx.exception))
+        finally:
+            vf.cv2 = original_cv2
+
+    def test_ela_actionable_error_when_cv2_missing(self):
+        """_compute_ela_metrics raises actionable RuntimeError if cv2 is missing."""
+        import numpy as np
+        import backend.services.visual_forensics as vf
+        original_cv2 = vf.cv2
+        try:
+            vf.cv2 = None
+            dummy_frame = np.zeros((64, 64, 3), dtype=np.uint8)
+            with self.assertRaises(RuntimeError) as ctx:
+                vf._compute_ela_metrics(dummy_frame)
+            self.assertIn("OpenCV (cv2) is required", str(ctx.exception))
+            self.assertIn("opencv-python-headless", str(ctx.exception))
+        finally:
+            vf.cv2 = original_cv2
+
+    def test_fft_spectrum_works_independent_of_cv2(self):
+        """2D FFT spectral analysis uses NumPy and operates even if cv2 is not loaded."""
+        import numpy as np
+        import backend.services.visual_forensics as vf
+        original_cv2 = vf.cv2
+        try:
+            vf.cv2 = None
+            gray = np.ones((64, 64), dtype=np.uint8) * 100
+            hf_ratio, regularity, flags = vf._compute_fft_spectrum(gray)
+            self.assertIsInstance(hf_ratio, float)
+            self.assertIsInstance(regularity, float)
+            self.assertIsInstance(flags, list)
+        finally:
+            vf.cv2 = original_cv2
 
 
 if __name__ == "__main__":
