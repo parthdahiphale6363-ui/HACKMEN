@@ -236,6 +236,7 @@ export default function Home() {
     setVideoScore(0); setAudioScore(0); setMetadataScore(0); setOsintScore(0); setDmScore(0);
     setActiveDemoCase(null); setSeekSec(null); setClaimFilter('all'); setClaimSearch('');
     setStage('extracting'); setProgress(5);
+    try {
       const res = await fetch('/api/jobs', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ video_url: cleanUrl }) });
       if (res.ok) {
         const job = await res.json();
