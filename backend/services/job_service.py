@@ -359,10 +359,18 @@ def validate_claim_for_verification(claim_text: str) -> Dict[str, Any]:
     }
 
 
-def clean_and_filter_claims(claims: List[Dict[str, str]]) -> List[Dict[str, str]]:
+def clean_and_filter_claims(claims: List[Any]) -> List[Dict[str, str]]:
     valid = []
     for item in claims:
-        claim_text = (item.get("claim") or "").strip()
+        if isinstance(item, dict):
+            claim_text = (item.get("claim") or item.get("text") or "").strip()
+            context_text = item.get("context", "")
+        elif isinstance(item, str):
+            claim_text = item.strip()
+            context_text = ""
+        else:
+            continue
+
         if not claim_text:
             continue
 
@@ -381,15 +389,15 @@ def clean_and_filter_claims(claims: List[Dict[str, str]]) -> List[Dict[str, str]
             print(f"[claims] Rejected non-factual filler: \"{claim_text[:80]}\"")
             continue
 
-        # Reject if >65% of meaningful words are stop words (very low information density)
+        # Reject if >85% of meaningful words are stop words (very low information density)
         meaningful = [w for w in words if len(w) > 2]
         if meaningful:
             stop_ratio = sum(1 for w in meaningful if w in _BROAD_STOP) / len(meaningful)
-            if stop_ratio > 0.65 and len(words) < 8:
+            if stop_ratio > 0.85 and len(words) < 8:
                 print(f"[claims] Rejected low-information claim (stop ratio={stop_ratio:.0%}): \"{claim_text[:80]}\"")
                 continue
 
-        item_copy = dict(item)
+        item_copy = dict(item) if isinstance(item, dict) else {"claim": claim_text, "context": context_text}
         item_copy["claim"] = validation["sanitized_claim"]
         if validation.get("is_ambiguous"):
             item_copy["is_ambiguous"] = True
@@ -1001,7 +1009,7 @@ def process_video(job: Job):
                 job.final_verdict_category = "Manipulated"
                 job.overall_verdict = overall_v_label
             elif overall_v == "LIKELY_AUTHENTIC":
-                job.final_verdict_category = "True"
+                job.final_verdict_category = "Likely Authentic"
                 job.overall_verdict = overall_v_label
             elif overall_v == "LIKELY_MANIPULATED":
                 job.final_verdict_category = "Manipulated"

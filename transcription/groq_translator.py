@@ -269,9 +269,16 @@ class GroqTranslator:
                 )]
 
             if _is_mostly_silent(segments):
-                raise SilentAudioError(
-                    "Audio flagged as silent (high no_speech_prob across most segments)."
-                )
+                # Only raise SilentAudioError if we do not have actual coherent spoken words
+                if len(english_text.strip().split()) < 4:
+                    raise SilentAudioError(
+                        "Audio flagged as silent (high no_speech_prob across most segments)."
+                    )
+                else:
+                    logger.info(
+                        "Audio segments flagged high silence probability, but %d spoken words detected; preserving transcript.",
+                        len(english_text.strip().split())
+                    )
 
             original_text = None
             if self.store_original:

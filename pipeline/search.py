@@ -702,6 +702,7 @@ def _llm_knowledge_factcheck(
     """Fail closed when retrieval is unavailable; model memory is not citable evidence."""
     return {
         "label": "unverified",
+        "unverified": True,
         "confidence": 0.2,
         "reasoning": "No claim-relevant, URL-backed evidence was retrieved. TruthLens does not use model memory as a citation.",
         "summary": "Unverified: external evidence was unavailable.",
@@ -1072,6 +1073,13 @@ def gather_evidence_for_claim(claim_text: str, transcript_text: str = "") -> Dic
         item for item in classified_items
         if item.stance in (EvidenceStance.SUPPORTS, EvidenceStance.PARTIALLY_SUPPORTS, EvidenceStance.CONTRADICTS)
     ]
+    # If heuristic regexes couldn't determine a definitive stance, but we have relevant retrieved passages
+    # that are not off-topic/unrelated (relevance_score >= 0.25), provide them to the LLM reasoning engine
+    if not accepted_for_llm:
+        accepted_for_llm = [
+            item for item in classified_items
+            if item.stance != EvidenceStance.UNRELATED and (getattr(item, "relevance_score", 0.0) or 0.0) >= 0.25
+        ][:6]
 
     # Rule 1: No relevant evidence in web search -> UNVERIFIED (Never infer a verdict without direct evidence)
     if not accepted_for_llm:
@@ -1131,7 +1139,8 @@ def gather_evidence_for_claim(claim_text: str, transcript_text: str = "") -> Dic
             for ev in result.get("evidence", [])
         )
         has_llm_contradict = any(
-            ev.get("supports_claim") is False or str(ev.get("stance", "")).lower() in ("contradicts", "refutes", "refuted", "debunked")
+            str(ev.get("stance", "")).lower() in ("contradicts", "refutes", "refuted", "debunked", "false")
+            or (ev.get("supports_claim") is False and str(ev.get("stance", "")).lower() not in ("neutral", "unrelated", "insufficient", "inconclusive", "partially_supports"))
             for ev in result.get("evidence", [])
         )
 
@@ -1241,7 +1250,7 @@ def gather_evidence_for_claim(claim_text: str, transcript_text: str = "") -> Dic
             fb["stopping_reason"] = "llm_error_keyword_fallback"
             return fb
         return {
-            "label": "misleading",
+            "label": "unverified",
             "unverified": True,
             "confidence": 0.20,
             "reasoning": f"Verification pipeline encountered an error: {e}. External evidence was insufficient or inaccessible. Missing evidence does not prove the claim false.",

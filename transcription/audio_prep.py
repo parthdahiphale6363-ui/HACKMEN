@@ -13,8 +13,60 @@ GROQ_SUPPORTED_FORMATS = {'.flac', '.mp3', '.mp4', '.mpeg', '.mpga', '.m4a', '.o
 COMPRESSION_BITRATES = ["64k", "48k", "32k"]
 
 
+import shutil
+
 class AudioPrepError(Exception):
     pass
+
+
+def _find_ffmpeg() -> str:
+    """Locate the ffmpeg executable from PATH, FFMPEG_PATH, or standard directories."""
+    env_path = os.environ.get("FFMPEG_PATH")
+    if env_path:
+        candidate_dir = env_path if os.path.isdir(env_path) else os.path.dirname(env_path)
+        candidate = os.path.join(candidate_dir, "ffmpeg.exe" if os.name == "nt" else "ffmpeg")
+        if os.path.exists(candidate):
+            return candidate
+
+    on_path = shutil.which("ffmpeg")
+    if on_path:
+        return on_path
+
+    local_app_data = os.environ.get("LOCALAPPDATA", "")
+    winget_base = os.path.join(local_app_data, "Microsoft", "WinGet", "Packages")
+    if os.path.isdir(winget_base):
+        for pkg_dir in os.listdir(winget_base):
+            if "ffmpeg" in pkg_dir.lower():
+                for root, _, files in os.walk(os.path.join(winget_base, pkg_dir)):
+                    for f in files:
+                        if f.lower() == ("ffmpeg.exe" if os.name == "nt" else "ffmpeg"):
+                            return os.path.join(root, f)
+    return "ffmpeg"
+
+
+def _find_ffprobe() -> str:
+    """Locate the ffprobe executable from PATH, FFMPEG_PATH, or standard directories."""
+    env_path = os.environ.get("FFMPEG_PATH")
+    if env_path:
+        candidate_dir = env_path if os.path.isdir(env_path) else os.path.dirname(env_path)
+        candidate = os.path.join(candidate_dir, "ffprobe.exe" if os.name == "nt" else "ffprobe")
+        if os.path.exists(candidate):
+            return candidate
+
+    on_path = shutil.which("ffprobe")
+    if on_path:
+        return on_path
+
+    local_app_data = os.environ.get("LOCALAPPDATA", "")
+    winget_base = os.path.join(local_app_data, "Microsoft", "WinGet", "Packages")
+    if os.path.isdir(winget_base):
+        for pkg_dir in os.listdir(winget_base):
+            if "ffmpeg" in pkg_dir.lower():
+                for root, _, files in os.walk(os.path.join(winget_base, pkg_dir)):
+                    for f in files:
+                        if f.lower() == ("ffprobe.exe" if os.name == "nt" else "ffprobe"):
+                            return os.path.join(root, f)
+    return "ffprobe"
 
 
 def _run_ffmpeg(cmd: list[str]) -> None:
@@ -28,8 +80,9 @@ def _run_ffmpeg(cmd: list[str]) -> None:
 
 
 def _convert_audio(input_path: str, output_path: str, bitrate: str) -> str:
+    ffmpeg_bin = _find_ffmpeg()
     cmd = [
-        "ffmpeg", "-y",
+        ffmpeg_bin, "-y",
         "-i", input_path,
         "-ar", "16000",
         "-ac", "1",
@@ -46,8 +99,9 @@ def has_audio_stream(input_path: str) -> bool:
     if not input_path or not os.path.exists(input_path):
         return False
     try:
+        ffprobe_bin = _find_ffprobe()
         cmd = [
-            "ffprobe", "-v", "error",
+            ffprobe_bin, "-v", "error",
             "-select_streams", "a:0",
             "-show_entries", "stream=codec_type",
             "-of", "default=noprint_wrappers=1:nokey=1",

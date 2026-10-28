@@ -248,3 +248,40 @@ def test_fuse_scores_does_not_penalize_unverified_as_false():
     score_false = fuse_scores(forensics, osint, dm, claim_false)["overall_confidence"]
 
     assert score_unverified > score_false, f"Unverified score ({score_unverified}) should be higher than false score ({score_false})"
+
+
+# ─── 6. ROBUST CLAIM FILTERING & SEARCH FALLBACK INTEGRATION ─────────────────
+
+def test_clean_and_filter_claims_supports_both_dicts_and_strings():
+    """clean_and_filter_claims must handle list of strings and list of dicts without AttributeError."""
+    raw_claims = [
+        "The Earth revolves around the Sun in approximately 365 days.",
+        {"claim": "Water boils at 100 degrees Celsius under standard atmospheric pressure.", "context": "Science class"},
+        {"text": "The Moon's gravitational pull influences ocean tides.", "context": "Astrophysics"},
+    ]
+    filtered = clean_and_filter_claims(raw_claims)
+    assert len(filtered) == 3
+    for c in filtered:
+        assert isinstance(c, dict)
+        assert "claim" in c
+        assert len(c["claim"]) > 10
+
+
+def test_clean_and_filter_claims_preserves_standard_english_facts():
+    """Factual propositions with common English words must not be dropped by aggressive stop word filtering."""
+    factual_claim = [{"claim": "This new law will increase the price of all vehicles by ten percent next month."}]
+    filtered = clean_and_filter_claims(factual_claim)
+    assert len(filtered) == 1
+    assert "increase the price of all vehicles" in filtered[0]["claim"]
+
+
+def test_search_error_fallback_label_is_unverified():
+    """In search.py, an error fallback must return label 'unverified' rather than 'misleading'."""
+    from pipeline.search import gather_evidence_for_claim
+    from unittest.mock import patch
+
+    with patch("pipeline.search._fetch_web_evidence", side_effect=RuntimeError("Search network outage")):
+        res = gather_evidence_for_claim("Test claim about economic inflation.", "Test claim about economic inflation.")
+        assert res["label"] == "unverified"
+        assert res.get("unverified") is True
+

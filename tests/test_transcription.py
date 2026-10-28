@@ -156,7 +156,7 @@ def test_unsupported_format_triggers_ffmpeg(mock_getsize, mock_subprocess, tmp_p
     assert output.endswith("test_prepared.mp3")
     mock_subprocess.assert_called()
     cmd = mock_subprocess.call_args[0][0]
-    assert "ffmpeg" in cmd
+    assert any("ffmpeg" in str(c).lower() for c in cmd)
     assert "-ar" in cmd
     assert "16000" in cmd
     assert "loudnorm" in cmd[cmd.index("-af") + 1]
