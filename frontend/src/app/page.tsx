@@ -257,8 +257,17 @@ export default function Home() {
         });
         clearTimeout(timeoutId);
         if (res.ok) {
-          job = await res.json();
-          break;
+          const contentType = res.headers.get('content-type') || '';
+          if (contentType.includes('application/json')) {
+            job = await res.json();
+            break;
+          }
+        } else if (res.status >= 400 && res.status < 500) {
+          const errData = await res.json().catch(() => null);
+          const msg = errData?.detail || errData?.message || 'Invalid request or video URL format.';
+          setErrorMessage(msg);
+          setStage('failed');
+          return;
         }
       } catch (err) {
         console.warn(`Connection attempt ${attempt} pending:`, err);

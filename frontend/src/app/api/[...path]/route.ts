@@ -3,6 +3,15 @@ import { NextRequest, NextResponse } from 'next/server';
 let _cachedWorkingBase: string | null = null;
 
 function getCandidateBases(req?: NextRequest): string[] {
+  const host = req?.headers.get('host') || '';
+  const isLocal = host.includes('localhost') || host.includes('127.0.0.1');
+
+  const localUrls = [
+    'http://127.0.0.1:8000',
+    'http://localhost:8000',
+    'http://127.0.0.1:8080',
+  ];
+
   const envList = [
     process.env.BACKEND_URL,
     process.env.NEXT_PUBLIC_BACKEND_URL,
@@ -12,7 +21,6 @@ function getCandidateBases(req?: NextRequest): string[] {
   for (const raw of envList) {
     let trimmed = raw.trim().replace(/\/$/, '');
     if (!trimmed.startsWith('http://') && !trimmed.startsWith('https://')) {
-      // If Render fromService assigned bare hostname "truthlens-backend", add public onrender.com domain
       if (!trimmed.includes('.') && !trimmed.includes(':')) {
         expandedEnvUrls.push(`https://${trimmed}.onrender.com`);
       }
@@ -21,37 +29,37 @@ function getCandidateBases(req?: NextRequest): string[] {
     expandedEnvUrls.push(trimmed);
   }
 
-  // Derive backend URL from incoming request host if running on Render
-  // (e.g. truthlens-frontend-xxxx.onrender.com -> truthlens-backend-xxxx.onrender.com)
-  const host = req?.headers.get('host') || '';
   const derivedUrls: string[] = [];
   if (host.includes('onrender.com')) {
     if (host.includes('frontend')) {
       derivedUrls.push(`https://${host.replace('-frontend', '-backend').replace('frontend', 'backend')}`);
     }
-    derivedUrls.push('https://truthlens-backend.onrender.com');
+    derivedUrls.push('https://truthlens-backend-ca5w.onrender.com');
   }
 
   const cloudInternalUrls = [
-    'https://truthlens-backend.onrender.com',
+    'https://truthlens-backend-ca5w.onrender.com',
     'http://truthlens-backend:10000',
     'http://truthlens-backend:8000',
-    'http://truthlens-backend',
     'http://multimodal-video-forensics-fact.railway.internal:8080',
     'http://multimodal-video-forensics-fact.railway.internal:8000',
-    'http://multimodal-video-forensics-fact:8080',
-    'http://multimodal-video-forensics-fact:8000',
   ];
 
-  const localUrls = [
-    'http://127.0.0.1:8000',
-    'http://127.0.0.1:8080',
-    'http://localhost:8000',
-  ];
+  let order: string[];
+  if (isLocal) {
+    // When running locally via run.bat / localhost:3000, local FastAPI is primary
+    order = [...localUrls, ...expandedEnvUrls, ...cloudInternalUrls];
+  } else {
+    // In cloud deployment, environment and derived Render URLs take priority
+    order = [...expandedEnvUrls, ...derivedUrls, ...cloudInternalUrls, ...localUrls];
+  }
 
-  const order = _cachedWorkingBase
-    ? [_cachedWorkingBase, ...expandedEnvUrls, ...derivedUrls, ...cloudInternalUrls, ...localUrls]
-    : [...expandedEnvUrls, ...derivedUrls, ...cloudInternalUrls, ...localUrls];
+  if (_cachedWorkingBase) {
+    const isCachedLocal = _cachedWorkingBase.includes('localhost') || _cachedWorkingBase.includes('127.0.0.1');
+    if (isLocal === isCachedLocal) {
+      order = [_cachedWorkingBase, ...order];
+    }
+  }
 
   return Array.from(new Set(order));
 }
@@ -84,13 +92,20 @@ async function handleProxy(req: NextRequest, params: { path?: string[] }) {
         cache: 'no-store',
       });
 
-      // If we got an HTTP response from the backend (even 4xx/5xx from FastAPI), network connected!
+      const contentType = res.headers.get('content-type') || '';
+      // If an upstream host returns HTML (e.g. Cloudflare error or parked domain), reject it as an API backend!
+      if (contentType.includes('text/html')) {
+        triedErrors.push({ base, error: 'Host returned HTML instead of API JSON' });
+        continue;
+      }
+
+      // If we got an authentic API response from the backend, cache and return!
       _cachedWorkingBase = base;
 
       const resBody = await res.arrayBuffer();
       const resHeaders = new Headers();
       res.headers.forEach((val, key) => {
-        if (!['content-encoding', 'transfer-encoding'].includes(key.toLowerCase())) {
+        if (!['content-encoding', 'transfer-encoding', 'content-length'].includes(key.toLowerCase())) {
           resHeaders.set(key, val);
         }
       });
