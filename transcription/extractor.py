@@ -127,7 +127,7 @@ def _build_ydl_opts(
 ) -> dict:
     """Build yt-dlp options dictionary with optimal bypass parameters."""
     opts = {
-        "format": "best[height<=480][ext=mp4]/bestvideo[height<=480]+bestaudio/best[height<=480]/bestaudio/best",
+        "format": "bestvideo[height<=1080][ext=mp4]+bestaudio[ext=m4a]/bestvideo[height<=1080]+bestaudio/bestvideo+bestaudio/best[ext=mp4]/best",
         "outtmpl": output_template,
         "quiet": True,
         "no_warnings": True,

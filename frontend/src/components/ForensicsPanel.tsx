@@ -234,8 +234,15 @@ export function ForensicsPanel({ report, onSeek }: ForensicsPanelProps) {
                   {visMod?.status || coverage.visual || (cv?.status === 'assessed' ? 'COMPLETED' : 'NOT_ANALYZED')}
                 </span>
               </div>
-              <div style={{ fontSize: '0.82rem', fontWeight: 800, color: meta.color, marginBottom: '0.25rem' }}>
-                {visMod?.verdict_label || (cv?.anomaly_level === 'elevated' ? 'Likely AI-Generated' : cv?.anomaly_level === 'low' ? 'Likely Authentic' : 'Inconclusive')}
+              <div
+                style={{
+                  fontSize: '0.82rem',
+                  fontWeight: 800,
+                  color: (visMod?.verdict === 'AI_GENERATED' ? '#ef4444' : (visMod?.verdict === 'LIKELY_AUTHENTIC' ? '#10b981' : (visMod?.verdict === 'LIKELY_MANIPULATED' ? '#06b6d4' : meta.color))),
+                  marginBottom: '0.25rem',
+                }}
+              >
+                {visMod?.verdict_label || (cv?.anomaly_level === 'elevated' ? 'LIKELY AI-GENERATED' : cv?.anomaly_level === 'low' ? 'LIKELY AUTHENTIC' : 'INCONCLUSIVE')}
               </div>
               <p style={{ margin: 0, fontSize: '0.72rem', color: 'var(--text-muted)' }}>
                 {cv?.frames_analyzed || 0} keyframes analyzed (~1 fps) · {cv?.video_resolution || 'Resolution N/A'}
@@ -277,8 +284,23 @@ export function ForensicsPanel({ report, onSeek }: ForensicsPanelProps) {
                   {audMod?.status || coverage.audio || (gem?.status === 'assessed' ? 'COMPLETED' : gem?.status === 'failed' ? 'FAILED' : 'NOT_ANALYZED')}
                 </span>
               </div>
-              <div style={{ fontSize: '0.82rem', fontWeight: 800, color: (audMod?.error_code || gem?.status === 'failed') ? '#ef4444' : 'var(--text-primary)', marginBottom: '0.25rem' }}>
-                {audMod?.verdict_label || (gem?.status === 'failed' ? 'INCONCLUSIVE (DETECTOR TIMEOUT)' : 'Inconclusive')}
+              <div
+                style={{
+                  fontSize: '0.82rem',
+                  fontWeight: 800,
+                  color: (audMod?.error_code || gem?.status === 'failed')
+                    ? '#ef4444'
+                    : (audMod?.verdict === 'AI_GENERATED'
+                    ? '#ef4444'
+                    : (audMod?.verdict === 'LIKELY_AUTHENTIC'
+                    ? '#10b981'
+                    : (audMod?.verdict === 'LIKELY_MANIPULATED'
+                    ? '#06b6d4'
+                    : 'var(--text-primary)'))),
+                  marginBottom: '0.25rem',
+                }}
+              >
+                {audMod?.verdict_label || (gem?.status === 'failed' ? 'INCONCLUSIVE (DETECTOR TIMEOUT)' : 'INCONCLUSIVE')}
               </div>
               {(audMod?.error_code || gem?.status === 'failed') ? (
                 <p style={{ margin: 0, fontSize: '0.72rem', color: '#ef4444', lineHeight: 1.4 }}>

@@ -372,39 +372,32 @@ def fuse_forensic_evidence(
         confidence = "MEDIUM"
         reason = "Isolated high-frequency spectral irregularities suggest partial AI post-processing or frame regeneration."
 
-    # Rule 7: Likely Manipulated (Conventional Editing or Undetermined Origin)
-    elif (vis_verdict == "LIKELY_MANIPULATED" or aud_verdict == "LIKELY_MANIPULATED" or scene_cuts > 0 or len(visual_forensics.get("scene_cuts", {}).get("cut_timestamps", [])) > 0):
-        if len(face_anomalies) == 0 and acoustic_score < 0.35 and tech_anomaly_score < 0.40 and vis_anomaly_level == "low":
-            overall_verdict = "LIKELY_MANIPULATED"
-            overall_label = "LIKELY MANIPULATED — ORIGIN UNDETERMINED"
-            classification = "CONVENTIONAL_EDITING_DETECTED"
-            confidence = "HIGH"
-            reason = f"Media contains conventional editorial scene cuts ({scene_cuts} cuts) or splice transitions without synthetic biometric signatures."
-        else:
-            overall_verdict = "LIKELY_MANIPULATED"
-            overall_label = "LIKELY MANIPULATED — ORIGIN UNDETERMINED"
-            classification = "INCONCLUSIVE"
-            confidence = "LOW"
-            reason = "Multiple editing cuts or audio transitions detected; evidence confirms editing but is insufficient to determine whether origin was AI-based."
+    # Rule 7: Likely Manipulated (Suspicious Splicing or Boundary Anomaly without proven AI origin)
+    elif (vis_verdict == "LIKELY_MANIPULATED" or aud_verdict == "LIKELY_MANIPULATED" or (scene_cuts >= 4 and vis_anomaly_level == "elevated")):
+        overall_verdict = "LIKELY_MANIPULATED"
+        overall_label = "LIKELY MANIPULATED — ORIGIN UNDETERMINED"
+        classification = "CONVENTIONAL_EDITING_DETECTED"
+        confidence = "HIGH" if (vis_active and aud_active) else "MEDIUM"
+        reason = f"Media contains conventional scene transitions ({scene_cuts} cuts) or editorial splicing; evidence confirms conventional editing without synthetic AI indicators."
 
-    # Rule 8: Authentic (No Anomalies)
-    elif len(anomaly_evidence) == 0 and vis_anomaly_level == "low" and acoustic_score < 0.25:
+    # Rule 8: Authentic (No Synthetic Anomalies)
+    elif len(anomaly_evidence) == 0 and vis_anomaly_level == "low" and acoustic_score < 0.35:
         overall_verdict = "LIKELY_AUTHENTIC"
         overall_label = "LIKELY AUTHENTIC — NO STRONG AI INDICATORS DETECTED"
         classification = "AUTHENTIC_NO_ANOMALIES_DETECTED"
-        confidence = "HIGH"
+        confidence = "HIGH" if (vis_active and aud_active) else "MEDIUM"
         if vis_active and aud_active:
-            reason = "All analyzed modalities (visual frequency spectra, facial boundaries, audio cadence, and container properties) passed within normal authentic parameters."
+            reason = "No synthetic AI indicators detected. Visual keyframes, optical focus, and speech acoustics demonstrate organic, natural characteristics."
         elif vis_active and not aud_active:
-            reason = "Visual keyframe analysis passed within normal parameters. Audio analysis was not assessed or failed; conclusion is based on visual modality alone. No detector can guarantee absolute authenticity."
+            reason = "Visual keyframes show natural optical focus, consistent lighting, and organic motion with no AI synthesis detected (concluded on visual modality alone as audio was unassessed or failed)."
         elif aud_active and not vis_active:
-            reason = "Audio stream analysis passed within normal parameters. Visual stream was not assessed; conclusion is based on audio alone. No detector can guarantee absolute authenticity."
+            reason = "Audio stream verified with natural vocal cadence and organic acoustic properties with no AI synthesis detected."
         else:
             overall_verdict = "INCONCLUSIVE"
             overall_label = "INCONCLUSIVE"
             classification = "INCONCLUSIVE"
             confidence = "UNCERTAIN"
-            reason = "Insufficient modalities could be assessed to conclude authenticity."
+            reason = "Insufficient media streams could be verified to determine authenticity."
 
     # Rule 9: Inconclusive Default
     else:

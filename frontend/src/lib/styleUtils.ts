@@ -1,6 +1,6 @@
 export function getVerdictCatStyle(cat: string): { color: string; bg: string; border: string } {
   const lc = (cat || '').toLowerCase();
-  if (lc.includes('genuine') || lc.includes('authentic') || lc.includes('supported'))
+  if (lc.includes('genuine') || lc.includes('authentic') || lc.includes('supported') || lc === 'true')
     return { color: '#059669', bg: 'rgba(5,150,105,0.07)', border: 'rgba(5,150,105,0.2)' };
   if (lc.includes('deepfake') || lc.includes('synthetic'))
     return { color: '#7c3aed', bg: 'rgba(124,58,237,0.07)', border: 'rgba(124,58,237,0.2)' };
