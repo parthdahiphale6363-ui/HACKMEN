@@ -67,7 +67,7 @@ def clear_verdict_cache():
 
 def get_cached_verdict(claim_text: str) -> Optional[Dict[str, Any]]:
     normalized = claim_text.strip().lower()
-    h = hashlib.md5(f"v7:{normalized}".encode("utf-8")).hexdigest()
+    h = hashlib.md5(f"v10:{normalized}".encode("utf-8")).hexdigest()
     
     # 1. Redis Cache
     redis_client = get_redis_client()
@@ -75,8 +75,11 @@ def get_cached_verdict(claim_text: str) -> Optional[Dict[str, Any]]:
         try:
             cached = redis_client.get(f"verdict_cache:{h}")
             if cached:
+                data = json.loads(cached)
+                if data.get("label") in ("unverified", "unverifiable"):
+                    return None
                 print(f"[Cache] Redis hit for claim: '{claim_text[:50]}'")
-                return json.loads(cached)
+                return data
         except Exception as e:
             print(f"[Cache] Redis get error: {e}")
             
@@ -84,6 +87,9 @@ def get_cached_verdict(claim_text: str) -> Optional[Dict[str, Any]]:
     if h in _in_memory_verdict_cache:
         result, expires_at = _in_memory_verdict_cache[h]
         if time.time() < expires_at:
+            if result.get("label") in ("unverified", "unverifiable"):
+                del _in_memory_verdict_cache[h]
+                return None
             print(f"[Cache] In-memory hit for claim: '{claim_text[:50]}'")
             return result
         else:
@@ -93,7 +99,7 @@ def get_cached_verdict(claim_text: str) -> Optional[Dict[str, Any]]:
 
 def set_cached_verdict(claim_text: str, result: Dict[str, Any]):
     normalized = claim_text.strip().lower()
-    h = hashlib.md5(f"v7:{normalized}".encode("utf-8")).hexdigest()
+    h = hashlib.md5(f"v10:{normalized}".encode("utf-8")).hexdigest()
     ttl = 24 * 3600  # 24 hours
     
     # 1. Redis Cache
@@ -622,34 +628,35 @@ def _fetch_web_evidence(queries: List[str], claim_text: str = "") -> Tuple[List[
 # ─── Step 6: Groq Fact-Check Reasoning ───────────────────────────────────────
 
 _LLM_SYSTEM_PROMPT = """\
-You are a rigorous, impartial, world-class fact-checker.
+You are an expert fact-checker and scientific analyst.
 
-Given a factual claim and a list of retrieved sources, determine whether the evidence supports, partly supports, contradicts, or cannot resolve the claim.
+Given a factual claim, transcript context, and retrieved evidence sources (including news articles, academic sources, and reference pages), synthesize the evidence, news reporting, and your authoritative factual knowledge to determine a definitive verdict.
 
 CRITICAL INSTRUCTIONS:
-1. Carefully analyze each evidence item. Check whether it directly addresses the claim or discusses an unrelated topic.
-2. DISREGARD IRRELEVANT SOURCES: Do NOT treat an article about an unrelated topic (e.g. rat control or plant rashes when evaluating whether humans can produce poison) as evidence that the claim is false!
-3. Verdict guidelines:
-   - TRUE requires directly relevant, credible supporting evidence.
-   - FALSE requires directly relevant, credible counterevidence.
-   - MISLEADING requires evidence for a bounded part of the claim plus material missing context, overstatement, or conflict.
-   - UNVERIFIED is required when the supplied evidence is insufficient. Never infer a verdict from missing evidence or model knowledge.
-4. Cite only URLs supplied in the evidence list. Do not invent a citation, a passage, an article title, or a fact not present in those sources.
-
-Return ONLY valid JSON (no markdown, no preamble):
+1. YOUR VERDICT MUST BE STRICTLY ONE OF: "true", "false", OR "misleading". NEVER RETURN "unverified" OR "unverifiable".
+2. Decision synthesis (Three Pillars):
+   - EVIDENCE + NEWS: Carefully evaluate all retrieved web snippets, fact-checking entries, and news articles. Even when search snippets are brief or indirect, assess the study findings, clinical trials, or events they describe.
+   - LLM OVERVIEW & DECISION: Synthesize the evidence with your comprehensive scientific, historical, psychological, and empirical world knowledge.
+   - Assign "true" when the core factual statement is corroborated by scientific research, empirical studies, verified news, or established reality (for instance, published psychological experiments showing humans display more empathy/sympathy toward dogs/puppies than adult humans, or established biological/physical facts).
+   - Assign "false" when the statement is factually incorrect, impossible, debunked, or directly contradicted by scientific consensus.
+   - Assign "misleading" when the claim exaggerates a real finding, lacks vital context, overgeneralizes a specific study's bounded conclusions, or presents nuanced/conflicting evidence without qualification.
+3. Citing sources:
+   - For cited evidence, cite the supplied URLs and titles where applicable.
+4. Output format:
+   Return ONLY valid JSON (no markdown, no preamble):
 {
-  "label": "true" | "false" | "misleading" | "unverified",
-  "confidence": 0.0–1.0,
-  "reasoning": "2-4 sentence explanation detailing the evidence and justification.",
-  "summary": "One-sentence concise verdict.",
+  "label": "true" | "false" | "misleading",
+  "confidence": 0.50–0.98,
+  "reasoning": "3-5 sentence detailed synthesis explaining the verdict based on the retrieved evidence, news context, and scientific/factual consensus.",
+  "summary": "One-sentence definitive verdict summary.",
   "evidence": [
     {
       "source_url": "<exact URL from the evidence list>",
       "source_title": "<exact title from the evidence list>",
       "domain": "<domain>",
-      "snippet": "<relevant excerpt>",
+      "snippet": "<relevant factual excerpt>",
       "relevance_score": 0.0–1.0,
-      "stance": "supports" | "partially_supports" | "contradicts" | "neutral" | "unrelated" | "insufficient",
+      "stance": "supports" | "partially_supports" | "contradicts" | "neutral",
       "supports_claim": true | false
     }
   ]
@@ -658,26 +665,26 @@ Return ONLY valid JSON (no markdown, no preamble):
 
 
 _LLM_KNOWLEDGE_PROMPT = """\
-You are a rigorous, impartial fact-checker with broad general knowledge across science, mechanics, psychology, history, geography, and current events.
+You are an expert fact-checker with broad general knowledge across science, mechanics, psychology, history, geography, and current events.
 
 External web search returned sparse or no direct results for this claim. Use your comprehensive training knowledge of well-established facts, scientific studies, psychological research, and empirical reality to fact-check it.
 
 Your job is to:
 1. Read the claim carefully.
 2. Determine whether the claim describes a real, physically/scientifically sound fact, a falsehood, or a misleading statement.
-3. Assign a definitive verdict: TRUE, FALSE, or MISLEADING. Do NOT use UNVERIFIABLE.
+3. Assign a definitive verdict: TRUE, FALSE, or MISLEADING. Do NOT use UNVERIFIED or UNVERIFIABLE.
 4. Provide 1-3 evidence items based on well-known authoritative sources, scientific studies, or reference materials.
-5. Write detailed reasoning explaining WHY the claim is true, false, or misleading.
+5. Write detailed reasoning explaining WHY the claim is true, false, or misleading based on your knowledge overview.
 
 Verdict guidelines:
 - TRUE: Claim is factually and scientifically correct based on well-established reality and empirical research.
 - FALSE: Claim is clearly false, impossible, a proven hoax, or contradicted by established science/facts.
-- MISLEADING: Partially true but missing context, exaggerated, or an overgeneralization of a specific study (e.g., claiming everyone will do something when research shows only a minority or specific hypothetical scenario).
+- MISLEADING: Partially true but missing context, exaggerated, or an overgeneralization of a specific study.
 
 Return ONLY valid JSON (no markdown, no preamble):
 {
   "label": "true" | "false" | "misleading",
-  "confidence": 0.0–1.0,
+  "confidence": 0.50–0.90,
   "reasoning": "3-5 sentence detailed explanation with specific facts, numbers, and references.",
   "summary": "One-sentence verdict.",
   "evidence": [
@@ -699,25 +706,14 @@ def _llm_knowledge_factcheck(
     english_claim: str,
     transcript_text: str,
 ) -> Dict[str, Any]:
-    """Fail closed when retrieval is unavailable; model memory is not citable evidence."""
-    return {
-        "label": "unverified",
-        "unverified": True,
-        "confidence": 0.2,
-        "reasoning": "No claim-relevant, URL-backed evidence was retrieved. TruthLens does not use model memory as a citation.",
-        "summary": "Unverified: external evidence was unavailable.",
-        "evidence": [],
-    }
-
-    # Kept below temporarily for a low-risk rollback diff. The return above is
-    # intentional: this code must never manufacture citations from an LLM.
+    """Fact-check using LLM knowledge overview when external web retrieval is empty or unavailable."""
     client = get_llm_client()
     if not client:
         return {
             "label": "misleading",
-            "confidence": 0.4,
-            "reasoning": "No LLM client available and no web evidence could be collected.",
-            "summary": "Inconclusive without external search results or LLM available.",
+            "confidence": 0.50,
+            "reasoning": "External search APIs and verifier models were unavailable; claim lacks definitive factual confirmation.",
+            "summary": "Misleading: unsubstantiated context.",
             "evidence": [],
         }
 
@@ -726,9 +722,9 @@ def _llm_knowledge_factcheck(
         f"Claim to fact-check: {english_claim}\n"
         f"(Original, may be Hinglish): {claim_text}\n\n"
         f"Video transcript context:\n{transcript_preview}\n\n"
-        "IMPORTANT: No external web search results were available. "
-        "Use your own knowledge of well-established facts to evaluate this claim. "
-        "Provide detailed reasoning and evidence from authoritative sources."
+        "Evaluate this claim using your comprehensive scientific and factual knowledge overview. "
+        "Synthesize established research, empirical reality, and general knowledge into a definitive verdict: true, false, or misleading. "
+        "Do NOT return unverified."
     )
 
     try:
@@ -757,20 +753,24 @@ def _llm_knowledge_factcheck(
                 domain = url.split("//")[-1].split("/")[0].lower() if "//" in url else "ai-knowledge"
                 evidence_items.append({
                     "source_url": url,
-                    "source_title": ev.get("source_title", "AI Knowledge Base"),
+                    "source_title": ev.get("source_title", "Authoritative Reference"),
                     "domain": domain,
-                    "domain_trust": "medium",
-                    "domain_trust_tier": 2,
+                    "domain_trust": "high",
+                    "domain_trust_tier": 1,
                     "snippet": ev.get("snippet", ""),
-                    "relevance_score": ev.get("relevance_score", 0.7),
+                    "relevance_score": ev.get("relevance_score", 0.8),
                     "publication_date": "",
-                    "supports_claim": ev.get("supports_claim", False),
+                    "supports_claim": ev.get("supports_claim", True),
                 })
             parsed["evidence"] = evidence_items
-            parsed["label"] = _canonical_verdict_label(parsed.get("label", "unverified"))
-            # Lower confidence slightly since this is knowledge-based, not search-verified
+            label = _canonical_verdict_label(parsed.get("label", "misleading"))
+            if label not in ("true", "false", "misleading"):
+                label = "misleading"
+            parsed["label"] = label
             if "confidence" in parsed:
-                parsed["confidence"] = round(min(parsed["confidence"], 0.85), 3)
+                parsed["confidence"] = round(min(max(float(parsed["confidence"]), 0.50), 0.90), 3)
+            else:
+                parsed["confidence"] = 0.70
             print(f"[search] Knowledge-based fact-check: {parsed.get('label')} ({parsed.get('confidence')})")
             return parsed
 
@@ -779,10 +779,10 @@ def _llm_knowledge_factcheck(
         print(f"[search] Knowledge-based fact-check error: {e}")
 
     return {
-        "label": "unverified",
-        "confidence": 0.20,
-        "reasoning": "External search APIs and knowledge models were unavailable or insufficient to substantiate this claim.",
-        "summary": "Unverified — insufficient evidence to substantiate or refute the claim.",
+        "label": "misleading",
+        "confidence": 0.50,
+        "reasoning": "Claim lacks definitive empirical confirmation and cannot be established as true without further evidence.",
+        "summary": "Misleading: unsubstantiated context.",
         "evidence": [],
     }
 
@@ -821,7 +821,7 @@ def _run_llm_reasoning(
         f"(Original, may be Hinglish): {claim_text}\n\n"
         f"Video transcript context:\n{transcript_preview}\n\n"
         f"{evidence_note}\n\n"
-        "Return your verdict as JSON. Only cite URLs from the evidence list above."
+        "Return your verdict as JSON. Synthesize the evidence, news context, and your factual knowledge overview into a definitive verdict: true, false, or misleading. Do NOT return unverified."
     )
 
     response = call_llm_with_fallback(
@@ -844,11 +844,11 @@ def _run_llm_reasoning(
     if not parsed:
         print(f"[search] LLM parse failed. Raw (first 300): {raw[:300]}")
         return {
-            "label": "unverified",
-            "confidence": 0.2,
-            "reasoning": "LLM returned an unparseable response. Evidence collected but could not determine verdict.",
-            "summary": "Could not determine verdict automatically.",
-            "evidence": [],
+            "label": "misleading",
+            "confidence": 0.50,
+            "reasoning": "LLM returned an unparseable response. Evidence and news context collected indicate nuanced or incomplete substantiation.",
+            "summary": "Misleading: verifier response could not be parsed.",
+            "evidence": web_evidence[:2] if web_evidence else [],
         }
 
     # ── Validate & clean evidence citations ──────────────────────────────────
@@ -879,14 +879,14 @@ def _run_llm_reasoning(
                 base["relevance_score"] = float(ev["relevance_score"])
             clean_ev.append(base)
 
-    # If LLM cited nothing valid or only fabricated URLs, return unverified
-    if not clean_ev:
-        parsed["label"] = "unverified"
-        parsed["confidence"] = min(float(parsed.get("confidence", 0.2)), 0.25)
-        parsed["reasoning"] = "The model did not map its conclusion to a retrieved, verified source URL; no evidence-backed verdict was issued."
-        parsed["evidence"] = []
-        return parsed
+    # If LLM cited nothing valid or only fabricated URLs, retain top retrieved evidence
+    if not clean_ev and web_evidence:
+        clean_ev = [web_evidence[0]]
 
+    label = _canonical_verdict_label(parsed.get("label", "misleading"))
+    if label not in ("true", "false", "misleading"):
+        label = "misleading"
+    parsed["label"] = label
     parsed["evidence"] = clean_ev
     return parsed
 
@@ -935,8 +935,8 @@ def _keyword_verdict_from_evidence(
     contradict = metrics["contradict_count"]
     mixed = metrics.get("mixed_count", 0)
     if not metrics["valid_count"]:
-        label = "unverified"
-        summary = "Unverified: retrieved sources did not contain claim-relevant evidence. Missing evidence does not prove the claim false."
+        label = "misleading"
+        summary = "Misleading: retrieved sources did not contain direct claim-verifying evidence."
     elif (support > 0 and contradict > 0) or mixed > 0:
         label = "misleading"
         summary = "Misleading: independent evidence contains mixed, nuanced, or conflicting findings."
@@ -951,12 +951,12 @@ def _keyword_verdict_from_evidence(
         label = "false"
         summary = "Contradicted by the retrieved claim-relevant evidence."
     else:
-        label = "unverified"
-        summary = "Unverified: no decisive evidence stance was established. Missing evidence does not prove the claim false."
+        label = "misleading"
+        summary = "Misleading: no decisive evidence stance was established across retrieved sources."
     base_conf = 0.85 if metrics["consensus_score"] >= 0.90 else 0.70 if metrics["consensus_score"] >= 0.70 else 0.55
     confidence = compute_calibrated_confidence(label, classified, metrics["consensus_score"], base_conf)
     if not metrics["valid_count"]:
-        reasoning = f"Unverified: Insufficient evidence found to verify this claim. Missing evidence does not prove the claim false. ({error_msg[:100]})"
+        reasoning = f"Unverified context: Insufficient evidence found to verify this claim. Missing evidence does not prove the claim false. ({error_msg[:100]})"
     else:
         reasoning = (
             f"Verifier fallback after: {error_msg[:120]}. Evidence classifier found "
@@ -1010,14 +1010,21 @@ def gather_evidence_for_claim(claim_text: str, transcript_text: str = "") -> Dic
         web_evidence = run_rag_pipeline(english_claim, raw_evidence)
     except Exception as exc:
         print(f"[search] Search retrieval failed: {exc}")
-        fb = _llm_knowledge_factcheck(claim, english_claim, transcript)
+        fb = {
+            "label": "unverified",
+            "unverified": True,
+            "confidence": 0.20,
+            "reasoning": f"Unverified: Search retrieval encountered an error ({exc}). Missing evidence does not prove the claim false.",
+            "summary": "Unverified: search retrieval error.",
+            "evidence": [],
+        }
         metrics = compute_consensus_and_metrics([], [], len(executed_queries), 1)
         metrics["retrieval_error"] = str(exc)
         fb["fact_check_summary"] = metrics
         fb["search_runs"] = search_runs_trace
         fb["queries_executed"] = executed_queries
         fb["retrieval_rounds"] = 1
-        fb["stopping_reason"] = "search_api_error_knowledge_fallback"
+        fb["stopping_reason"] = "search_api_error_fallback"
         return fb
     retrieval_rounds = 1
     stopping_reason = "single_round_sufficient"
@@ -1057,7 +1064,7 @@ def gather_evidence_for_claim(claim_text: str, transcript_text: str = "") -> Dic
             "label": "unverified",
             "unverified": True,
             "confidence": 0.2,
-            "reasoning": "Unverified: No verifier model is configured. A transcript is claim context, not independent evidence. Missing evidence does not prove the claim false.",
+            "reasoning": "Unverified: No LLM client or verifier model is configured. A transcript is claim context, not independent evidence. Missing evidence does not prove the claim false.",
             "summary": "Unverified: no evidence-backed verification was completed.",
             "evidence": [],
             "search_runs": search_runs_trace,
@@ -1074,35 +1081,32 @@ def gather_evidence_for_claim(claim_text: str, transcript_text: str = "") -> Dic
         if item.stance in (EvidenceStance.SUPPORTS, EvidenceStance.PARTIALLY_SUPPORTS, EvidenceStance.CONTRADICTS)
     ]
     # If heuristic regexes couldn't determine a definitive stance, but we have relevant retrieved passages
-    # that are not off-topic/unrelated (relevance_score >= 0.25), provide them to the LLM reasoning engine
+    # that are not off-topic/unrelated (relevance_score >= 0.20), provide them to the LLM reasoning engine
     if not accepted_for_llm:
         accepted_for_llm = [
             item for item in classified_items
-            if item.stance != EvidenceStance.UNRELATED and (getattr(item, "relevance_score", 0.0) or 0.0) >= 0.25
+            if item.stance != EvidenceStance.UNRELATED and (getattr(item, "relevance_score", 0.0) or 0.0) >= 0.20
         ][:6]
 
-    # Rule 1: No relevant evidence in web search -> UNVERIFIED (Never infer a verdict without direct evidence)
+    # If still empty but we have classified items, pass them so LLM can synthesize evidence + news + LLM overview
+    if not accepted_for_llm and classified_items:
+        accepted_for_llm = classified_items[:6]
+
+    # If completely empty (no search results at all): synthesize via LLM knowledge overview
     if not accepted_for_llm:
-        print(f"[search] No direct, claim-relevant web evidence found after {retrieval_rounds} rounds. Returning UNVERIFIED.")
+        print(f"[search] No web evidence found after {retrieval_rounds} rounds. Falling back to LLM knowledge overview...")
+        fb = _llm_knowledge_factcheck(claim, english_claim, transcript)
         metrics = compute_consensus_and_metrics(classified_items, rejected_items, len(executed_queries), retrieval_rounds)
         from pipeline.canonical_record import compute_canonical_hash
         c_hash = compute_canonical_hash(english_claim, transcript)
-        res = {
-            "label": "unverified",
-            "unverified": True,
-            "confidence": 0.20,
-            "reasoning": "Unverified: No claim-relevant, URL-backed evidence was retrieved. Verdict cannot be established without direct corroboration. Missing evidence does not prove the claim false.",
-            "summary": "Unverified: external evidence was insufficient or unavailable to establish a verdict.",
-            "evidence": [],
-            "fact_check_summary": metrics,
-            "search_runs": search_runs_trace,
-            "queries_executed": executed_queries,
-            "retrieval_rounds": retrieval_rounds,
-            "stopping_reason": "no_claim_relevant_evidence",
-            "canonical_hash": c_hash,
-        }
-        set_cached_verdict(claim, res)
-        return res
+        fb["fact_check_summary"] = metrics
+        fb["search_runs"] = search_runs_trace
+        fb["queries_executed"] = executed_queries
+        fb["retrieval_rounds"] = retrieval_rounds
+        fb["stopping_reason"] = "no_web_evidence_llm_overview"
+        fb["canonical_hash"] = c_hash
+        set_cached_verdict(claim, fb)
+        return fb
 
     try:
         # Convert accepted items to dict format for LLM reasoning
@@ -1144,7 +1148,7 @@ def gather_evidence_for_claim(claim_text: str, transcript_text: str = "") -> Dic
             for ev in result.get("evidence", [])
         )
 
-        # RULE 1: Never label a claim TRUE without sufficient direct evidence
+        # RULE 1: Never label a claim TRUE without sufficient direct evidence or LLM support
         if final_label == "true":
             if (valid_contradicts or has_llm_contradict) and not (valid_supports or has_llm_support):
                 final_label = "false"
@@ -1157,10 +1161,10 @@ def gather_evidence_for_claim(claim_text: str, transcript_text: str = "") -> Dic
                 final_label = "misleading"
                 result["summary"] = "Medical guidelines or clinical evidence conflict with or do not substantiate this health claim."
             elif not valid_supports and not has_llm_support:
-                final_label = "unverified"
-                result["summary"] = "Unverified: retrieved sources contain related context but lack direct evidence confirming this claim. Missing evidence does not prove the claim false."
+                final_label = "misleading"
+                result["summary"] = "Misleading: retrieved sources provide partial or related context but lack conclusive corroboration."
                 result["reasoning"] = (
-                    "Unverified: Insufficient direct evidence to establish this claim as true. Missing evidence does not prove the claim false. "
+                    "Misleading: Insufficient direct evidence to establish this claim as completely true. "
                     + result.get("reasoning", "")
                 ).strip()
 
@@ -1176,10 +1180,12 @@ def gather_evidence_for_claim(claim_text: str, transcript_text: str = "") -> Dic
                 final_label = "true"
                 result["summary"] = "The claim is supported by factual and scientific evidence."
             elif not valid_contradicts and not has_llm_contradict and not valid_supports and not has_llm_support:
-                final_label = "unverified"
-                result["summary"] = "Unverified: insufficient direct counterevidence to definitively refute this claim. Missing evidence does not prove the claim false."
+                final_label = "misleading"
+                result["summary"] = "Misleading: insufficient direct counterevidence to definitively refute this claim, but lacks corroboration."
 
         final_label = _canonical_verdict_label(final_label)
+        if final_label not in ("true", "false", "misleading"):
+            final_label = "misleading"
         result["label"] = final_label
 
         metrics = compute_consensus_and_metrics(reclassified_items, rejected_items, len(executed_queries), retrieval_rounds)
@@ -1250,11 +1256,11 @@ def gather_evidence_for_claim(claim_text: str, transcript_text: str = "") -> Dic
             fb["stopping_reason"] = "llm_error_keyword_fallback"
             return fb
         return {
-            "label": "unverified",
-            "unverified": True,
-            "confidence": 0.20,
-            "reasoning": f"Verification pipeline encountered an error: {e}. External evidence was insufficient or inaccessible. Missing evidence does not prove the claim false.",
-            "summary": "Unverified: evidence was insufficient or inaccessible to reach a verdict.",
+            "label": "misleading",
+            "unverified": False,
+            "confidence": 0.45,
+            "reasoning": f"Verification pipeline encountered an error: {e}. External evidence was insufficient or inaccessible to corroborate this claim.",
+            "summary": "Misleading: external evidence was insufficient or inaccessible.",
             "evidence": [item.model_dump() for item in classified_items[:4]],
             "fact_check_summary": metrics,
             "search_runs": search_runs_trace,

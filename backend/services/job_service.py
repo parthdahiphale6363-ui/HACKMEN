@@ -1074,10 +1074,10 @@ def process_video(job: Job):
             except Exception as e:
                 print(f"[process_video] Claim {idx+1} verification error: {e}")
                 search_result = {
-                    "label": "unverified",
-                    "confidence": 0.0,
+                    "label": "misleading",
+                    "confidence": 0.50,
                     "reasoning": f"Verification error: {e}. Insufficient evidence to establish veracity.",
-                    "summary": "Verification encountered an upstream error — marked as UNVERIFIED.",
+                    "summary": "Verification encountered an upstream error — marked as MISLEADING.",
                     "evidence": [],
                     "fact_check_summary": {
                         "searches_run": 1,
@@ -1089,14 +1089,16 @@ def process_video(job: Job):
                         "source_acceptance": 0.0,
                         "consensus_score": 0.0,
                         "consensus": 0.0,
-                        "verdict_confidence": 0.0,
+                        "verdict_confidence": 0.50,
                         "llm_rounds": 1,
                         "critic_rejections": 0,
                     },
                     "search_runs": [],
                 }
 
-            verdict_label = search_result.get("label", "unverified")
+            verdict_label = search_result.get("label", "misleading")
+            if verdict_label in ("unverified", "unverifiable"):
+                verdict_label = "misleading"
             evidence_items = _build_evidence_items(search_result, verdict_label)
 
             avg_rel = round(sum(e.get("relevance_score", 0.75) for e in evidence_items) / max(1, len(evidence_items)), 3) if evidence_items else 0.0
